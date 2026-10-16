@@ -42,6 +42,24 @@ final class SampleRateModel: ObservableObject {
     private var timer: Timer?
     private var latestLogCandidateRate: Double?
     private var stableLogSampleRate: Double?
+    private var latestTrackInfo: TrackInfo?
+    private var latestTrackInfoError: String?
+    private var trackInfoFetchInFlight = false
+    private var artworkFetchInFlight = false
+    /// The track whose cover the AppleScript fallback still owes us, if any.
+    private var pendingArtworkTitle: String?
+
+    /// A log-derived vote, buffered off the main thread before being folded
+    /// into `logRateWindow`. See `enqueueLogVote`.
+    private struct LogVote {
+        let rate: Double
+        let weight: Int
+    }
+
+    private let logVoteQueue = DispatchQueue(label: "com.garykong.choritsu.logvotes")
+    private var pendingLogVotes: [LogVote] = []
+    private var logFlushScheduled = false
+    private static let logFlushInterval: TimeInterval = 0.05
     private var stableLogSampleRateAt: Date?
     private var logRateWindow: [(rate: Double, date: Date, weight: Int)] = []
     private var lastTrackTitle: String?
@@ -73,17 +91,17 @@ final class SampleRateModel: ObservableObject {
 
     func togglePlayPause() {
         isPlaying.toggle()
-        musicController.sendCommand(.playPause)
+        musicController.send(.playPause)
         scheduleQuickRefresh()
     }
 
     func nextTrack() {
-        musicController.sendCommand(.nextTrack)
+        musicController.send(.nextTrack)
         scheduleQuickRefresh()
     }
 
     func previousTrack() {
-        musicController.sendCommand(.previousTrack)
+        musicController.send(.previousTrack)
         scheduleQuickRefresh()
     }
 
@@ -159,7 +177,12 @@ final class SampleRateModel: ObservableObject {
 
     private func updateState() {
         let outputDevice = audioController.defaultOutputDeviceInfo()
-        let fallbackTrack = musicController.currentTrackInfo()
+
+        // Kick off an off-main refresh for the next pass. The AppleScript
+        // round trip used to run inline here and block the main thread (and
+        // therefore this timer) for tens of seconds; now it only ever updates
+        // the cached value that `applyNowPlaying` reads.
+        refreshTrackInfoIfNeeded()
 
         outputDeviceName = outputDevice.name
         outputDeviceIcon = outputDevice.iconName
@@ -184,16 +207,27 @@ final class SampleRateModel: ObservableObject {
 
         mediaRemoteController.nowPlayingInfo { [weak self] result in
             DispatchQueue.main.async {
-                self?.applyNowPlaying(result,
-                                      outputDevice: outputDevice,
-                                      fallback: fallbackTrack)
+                self?.applyNowPlaying(result, outputDevice: outputDevice)
             }
         }
     }
 
+    /// Refreshes the Music.app fallback metadata without blocking. At most one
+    /// fetch is ever in flight; the result lands on the main queue.
+    private func refreshTrackInfoIfNeeded() {
+        guard !trackInfoFetchInFlight else { return }
+        trackInfoFetchInFlight = true
+
+        musicController.fetchTrackInfo { [weak self] result in
+            guard let self else { return }
+            self.trackInfoFetchInFlight = false
+            self.latestTrackInfo = result.track
+            self.latestTrackInfoError = result.errorMessage
+        }
+    }
+
     private func applyNowPlaying(_ result: NowPlayingResult,
-                                 outputDevice: OutputDeviceInfo,
-                                 fallback: TrackFetchResult) {
+                                 outputDevice: OutputDeviceInfo) {
         if let errorMessage = result.errorMessage, !errorMessage.isEmpty {
             currentTrackTitle = "Unavailable"
             trackSampleRateDisplay = "Unknown"
@@ -202,7 +236,7 @@ final class SampleRateModel: ObservableObject {
         }
 
         let info = result.info
-        let fallbackTrack = fallback.track
+        let fallbackTrack = latestTrackInfo
 
         var resolvedTitle = info?.title ?? ""
         if resolvedTitle.isEmpty || resolvedTitle == "Unknown", let fallbackTrack {
@@ -218,7 +252,7 @@ final class SampleRateModel: ObservableObject {
             durationSeconds = nil
             updateArtwork(nil)
             updateCurrentSampleRateDisplay()
-            statusMessage = fallback.errorMessage ?? ""
+            statusMessage = latestTrackInfoError ?? ""
             return
         }
 
@@ -278,17 +312,52 @@ final class SampleRateModel: ObservableObject {
         let trackChanged = artworkTrackTitle != currentTrackTitle
         artworkTrackTitle = currentTrackTitle
 
-        var resolved = data
-        if resolved == nil {
-            // MediaRemote artwork is unavailable; ask Music directly, but
-            // only once per track since the AppleScript round trip is slow.
-            guard trackChanged else { return }
-            resolved = currentTrackTitle == "Not playing" ? nil : musicController.currentTrackArtwork()
+        if let data {
+            pendingArtworkTitle = nil
+            applyArtwork(data)
+            return
         }
 
-        guard resolved != lastArtworkData else { return }
-        lastArtworkData = resolved
-        artwork = resolved.flatMap { NSImage(data: $0) }
+        // MediaRemote artwork is unavailable; ask Music directly, but only
+        // once per track. The fetch runs off the main thread.
+        guard trackChanged else { return }
+
+        guard currentTrackTitle != "Not playing" else {
+            pendingArtworkTitle = nil
+            applyArtwork(nil)
+            return
+        }
+
+        pendingArtworkTitle = currentTrackTitle
+        fetchPendingArtwork()
+    }
+
+    /// At most one fetch is in flight. A track change mid-flight does not
+    /// start a second one; the running fetch re-issues itself for the new
+    /// track when it lands, so the new track is never left without a cover.
+    private func fetchPendingArtwork() {
+        guard !artworkFetchInFlight, let title = pendingArtworkTitle else { return }
+        artworkFetchInFlight = true
+
+        musicController.fetchArtwork { [weak self] data in
+            guard let self else { return }
+            self.artworkFetchInFlight = false
+
+            // Drop the result if the track changed while we were fetching;
+            // otherwise a slow reply would show the previous cover.
+            guard self.pendingArtworkTitle == title else {
+                self.fetchPendingArtwork()
+                return
+            }
+            self.pendingArtworkTitle = nil
+            self.applyArtwork(data)
+        }
+    }
+
+    private func applyArtwork(_ data: Data?) {
+        guard data != lastArtworkData else { return }
+        lastArtworkData = data
+        artwork = data.flatMap { NSImage(data: $0) }
     }
 
     func formatSampleRate(_ sampleRate: Double?) -> String {
@@ -308,9 +377,8 @@ final class SampleRateModel: ObservableObject {
 
     private func startLogParser() {
         logController.onSampleRate = { [weak self] rate, message in
-            DispatchQueue.main.async {
-                self?.handleLogSampleRate(rate, message: message)
-            }
+            let weight = (message?.contains("Derived from frames/duration") ?? false) ? 3 : 1
+            self?.enqueueLogVote(rate: rate, weight: weight)
         }
 
         logController.onStatus = { [weak self] status in
@@ -348,16 +416,45 @@ final class SampleRateModel: ObservableObject {
         }
     }
 
-    private func handleLogSampleRate(_ rate: Double, message: String?) {
+    /// Buffers a vote off the main thread and flushes the batch at most every
+    /// `logFlushInterval`. The votes themselves (rate + weight) and the
+    /// dominance math downstream are unchanged — only the cadence at which
+    /// `logRateWindow` grows is throttled.
+    private func enqueueLogVote(rate: Double, weight: Int) {
+        logVoteQueue.async { [weak self] in
+            guard let self else { return }
+            self.pendingLogVotes.append(LogVote(rate: rate, weight: weight))
+
+            guard !self.logFlushScheduled else { return }
+            self.logFlushScheduled = true
+
+            self.logVoteQueue.asyncAfter(deadline: .now() + Self.logFlushInterval) { [weak self] in
+                guard let self else { return }
+                let batch = self.pendingLogVotes
+                self.pendingLogVotes.removeAll(keepingCapacity: true)
+                self.logFlushScheduled = false
+
+                guard !batch.isEmpty else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.ingestLogVotes(batch)
+                }
+            }
+        }
+    }
+
+    private func ingestLogVotes(_ votes: [LogVote]) {
         let now = Date()
-        guard let candidateRate = quantizeLogRate(rate) else {
-            return
+
+        var latestCandidate: Double?
+        for vote in votes {
+            guard let candidateRate = quantizeLogRate(vote.rate) else { continue }
+            latestCandidate = candidateRate
+            logRateWindow.append((rate: candidateRate, date: now, weight: vote.weight))
         }
 
-        latestLogCandidateRate = candidateRate
+        guard let latestCandidate else { return }
+        latestLogCandidateRate = latestCandidate
 
-        let weight = (message?.contains("Derived from frames/duration") ?? false) ? 3 : 1
-        logRateWindow.append((rate: candidateRate, date: now, weight: weight))
         logRateWindow = logRateWindow.filter { now.timeIntervalSince($0.date) <= 6.0 }
 
         let totalWeight = logRateWindow.reduce(0) { $0 + $1.weight }
@@ -385,7 +482,7 @@ final class SampleRateModel: ObservableObject {
             }
         }
 
-        if let message, stableLogSampleRate == nil {
+        if stableLogSampleRate == nil {
             logStatusMessage = "Log estimating \(formatSampleRate(dominantRate)) (\(dominantWeight)/\(totalWeight))"
         }
     }

@@ -12,21 +12,69 @@ final class LogStreamController {
     private var lastFrameTimestamp: Date?
     private var lastDurationSeconds: Double?
     private var lastDurationTimestamp: Date?
+    private var isStopping = false
+    private var restartAttempts = 0
+    private var restartWorkItem: DispatchWorkItem?
+    private var launchedAt: Date?
 
     var onSampleRate: ((Double, String?) -> Void)?
     var onStatus: ((String) -> Void)?
 
-    var predicate: String = "(process == \"Music\" OR subsystem CONTAINS[c] \"com.apple.Music\" OR subsystem CONTAINS[c] \"com.apple.mediaremoted\") AND (eventMessage CONTAINS[c] \"sample\" OR eventMessage CONTAINS[c] \"lossless\" OR eventMessage CONTAINS[c] \"hi-res\" OR eventMessage CONTAINS[c] \"kHz\" OR eventMessage CONTAINS[c] \"Hz\" OR eventMessage CONTAINS[c] \"audio\" OR eventMessage CONTAINS[c] \"format\")"
+    /// Deliberately narrow. Matching `CONTAINS[c] "audio"` and
+    /// `CONTAINS[c] "format"` turned this into a firehose — Music.app alone
+    /// emitted thousands of matching debug events every few seconds, and each
+    /// one was dispatched to the main queue.
+    var predicate: String = "(process == \"Music\" OR subsystem == \"com.apple.Music\" OR subsystem == \"com.apple.mediaremoted\") AND (eventMessage CONTAINS[c] \"sample rate\" OR eventMessage CONTAINS[c] \"samplerate\" OR eventMessage CONTAINS[c] \"lossless\" OR eventMessage CONTAINS[c] \"hi-res\" OR eventMessage CONTAINS[c] \"kHz\" OR eventMessage CONTAINS[c] \"frames\" OR eventMessage CONTAINS[c] \"duration\")"
     var logLevel: String = "debug"
 
-    func start() {
-        stop()
+    /// Stop retrying after this many consecutive failures so a permanently
+    /// broken `log stream` cannot spawn processes forever.
+    private static let maxRestartAttempts = 5
 
+    /// A stream that stays up this long counts as healthy, so its eventual
+    /// exit starts the backoff over instead of using up another attempt.
+    private static let healthyUptime: TimeInterval = 30
+
+    // MARK: - Lifecycle
+    //
+    // All process state lives behind `queue`. Both `start()` and `stop()` are
+    // safe to call from any thread; they hand the work to `queue` and return
+    // immediately.
+
+    func start() {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.isStopping = false
+            self.restartAttempts = 0
+            self.restartWorkItem?.cancel()
+            self.restartWorkItem = nil
+            self.teardownStream()
+            self.launchStream()
+        }
+    }
+
+    func stop() {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.isStopping = true
+            self.restartWorkItem?.cancel()
+            self.restartWorkItem = nil
+            self.restartAttempts = 0
+            self.teardownStream()
+        }
+    }
+
+    /// Must be called on `queue`.
+    private func launchStream() {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/log")
         proc.arguments = [
             "stream",
-            "--style", "json",
+            // `ndjson` emits one compact JSON object per line. `json` emits
+            // pretty-printed multi-line objects, which cannot be framed by
+            // newline — every `json` event used to be split across many bogus
+            // "lines" and dropped.
+            "--style", "ndjson",
             "--level", logLevel,
             "--predicate", predicate
         ]
@@ -36,43 +84,106 @@ final class LogStreamController {
         proc.standardOutput = outPipe
         proc.standardError = errPipe
 
-        outputHandle = outPipe.fileHandleForReading
-        errorHandle = errPipe.fileHandleForReading
+        let outHandle = outPipe.fileHandleForReading
+        let errHandle = errPipe.fileHandleForReading
+        outputHandle = outHandle
+        errorHandle = errHandle
 
-        outputHandle?.readabilityHandler = { [weak self] handle in
+        outHandle.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
-            if data.isEmpty { return }
-            self?.queue.async {
-                self?.buffer.append(data)
-                self?.drainBuffer()
+            guard let self else { return }
+            if data.isEmpty {
+                // EOF: the child closed stdout, i.e. it exited or was killed.
+                self.queue.async { self.handleStreamEnded() }
+                return
+            }
+            self.queue.async {
+                self.buffer.append(data)
+                self.drainBuffer()
             }
         }
 
-        errorHandle?.readabilityHandler = { [weak self] handle in
+        errHandle.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
-            if data.isEmpty { return }
-            if let text = String(data: data, encoding: .utf8), !text.isEmpty {
-                self?.onStatus?(text.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
+            guard !data.isEmpty else { return }
+            guard let self else { return }
+            guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            DispatchQueue.main.async { self.onStatus?(trimmed) }
+        }
+
+        // Without this, a crashed or SIGKILLed `log stream` left the app
+        // silently receiving no events forever — the auto-switch simply
+        // stopped working with no indication why.
+        proc.terminationHandler = { [weak self] _ in
+            guard let self else { return }
+            self.queue.async { self.handleStreamEnded() }
         }
 
         do {
             try proc.run()
             process = proc
-            onStatus?("Log stream started")
+            launchedAt = Date()
+            DispatchQueue.main.async { self.onStatus?("Log stream started") }
         } catch {
-            onStatus?("Failed to start log stream: \(error.localizedDescription)")
+            process = nil
+            DispatchQueue.main.async {
+                self.onStatus?("Failed to start log stream: \(error.localizedDescription)")
+            }
+            scheduleRestart()
         }
     }
 
-    func stop() {
+    /// Must be called on `queue`. Idempotent: the EOF path and the
+    /// `terminationHandler` both funnel here, and the first one wins.
+    private func handleStreamEnded() {
+        guard !isStopping else { return }
+        guard process != nil || outputHandle != nil else { return }
+        // Only a stream that ran for a while resets the budget. Resetting on
+        // every successful `run()` let a `log stream` that exits right after
+        // launch (a rejected predicate, say) respawn every second forever.
+        if let launchedAt, Date().timeIntervalSince(launchedAt) >= Self.healthyUptime {
+            restartAttempts = 0
+        }
+        teardownStream()
+        scheduleRestart()
+    }
+
+    /// Must be called on `queue`.
+    private func scheduleRestart() {
+        guard !isStopping else { return }
+        guard restartAttempts < Self.maxRestartAttempts else {
+            let attempts = restartAttempts
+            DispatchQueue.main.async {
+                self.onStatus?("Log stream stopped after \(attempts) failed restarts")
+            }
+            return
+        }
+
+        restartAttempts += 1
+        let delay = min(pow(2.0, Double(restartAttempts - 1)), 30.0)
+        let item = DispatchWorkItem { [weak self] in
+            guard let self, !self.isStopping else { return }
+            self.launchStream()
+        }
+        restartWorkItem?.cancel()
+        restartWorkItem = item
+        queue.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    /// Must be called on `queue`.
+    private func teardownStream() {
         outputHandle?.readabilityHandler = nil
         errorHandle?.readabilityHandler = nil
         outputHandle = nil
         errorHandle = nil
-        buffer.removeAll()
+        launchedAt = nil
+        buffer.removeAll(keepingCapacity: false)
 
         if let process {
+            // Clear first: terminating fires the handler, and we do not want
+            // a deliberate teardown to look like a crash.
+            process.terminationHandler = nil
             process.terminate()
             self.process = nil
         }
