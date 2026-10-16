@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>同频 SyncHz：Apple Music 无损采样率自动切换与耳机均衡（Mac）</title>
 <meta name="description" content="免费开源的 Mac 菜单栏工具：自动把解码器切换到 Apple Music 每首歌的真实采样率（44.1–192 kHz），高解析度无损 bit-perfect 输出；可选导入 AutoEq、PEQdB 预设的耳机参数均衡。">
-<link rel="canonical" href="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
-<link rel="alternate" hreflang="en" href="https://jcongaku.github.io/apple-music-lossless-eq/">
-<link rel="alternate" hreflang="zh-Hans" href="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
-<link rel="alternate" hreflang="x-default" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<link rel="canonical" href="https://jcongaku.github.io/SyncHz/zh/">
+<link rel="alternate" hreflang="en" href="https://jcongaku.github.io/SyncHz/">
+<link rel="alternate" hreflang="zh-Hans" href="https://jcongaku.github.io/SyncHz/zh/">
+<link rel="alternate" hreflang="x-default" href="https://jcongaku.github.io/SyncHz/">
 <meta name="theme-color" content="#F5F4F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#18181A" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="../favicon.png">
@@ -17,8 +17,8 @@
 <meta property="og:site_name" content="同频 SyncHz">
 <meta property="og:title" content="同频 SyncHz：给 Mac 上的 Apple Music 用">
 <meta property="og:description" content="解码器自动跟随每首 Apple Music 曲目的采样率，44.1 到 192 kHz，高解析度无损 bit-perfect；需要时再叠一层读取 AutoEq、PEQdB 预设的耳机均衡。">
-<meta property="og:url" content="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
-<meta property="og:image" content="https://jcongaku.github.io/apple-music-lossless-eq/social.png">
+<meta property="og:url" content="https://jcongaku.github.io/SyncHz/zh/">
+<meta property="og:image" content="https://jcongaku.github.io/SyncHz/social.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="同频 SyncHz 的图标与菜单栏面板，显示 96 kHz 已同步">
@@ -36,14 +36,14 @@
   "description": "Mac 上 Apple Music 的无损采样率自动切换工具，附带耳机参数均衡。把输出设备切换到每首曲目的采样率（44.1–192 kHz），并可导入 AutoEq、PEQdB 预设。",
   "applicationCategory": "MultimediaApplication",
   "operatingSystem": "macOS 15 或更高版本",
-  "url": "https://jcongaku.github.io/apple-music-lossless-eq/zh/",
-  "downloadUrl": "https://github.com/jcongaku/apple-music-lossless-eq/releases/latest",
-  "image": "https://jcongaku.github.io/apple-music-lossless-eq/icon.png",
-  "screenshot": "https://jcongaku.github.io/apple-music-lossless-eq/screenshots/hero-zh-Hans-light.png",
+  "url": "https://jcongaku.github.io/SyncHz/zh/",
+  "downloadUrl": "https://github.com/jcongaku/SyncHz/releases/latest",
+  "image": "https://jcongaku.github.io/SyncHz/icon.png",
+  "screenshot": "https://jcongaku.github.io/SyncHz/screenshots/hero-zh-Hans-light.png",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
-  "sameAs": ["https://github.com/jcongaku/apple-music-lossless-eq"]
+  "sameAs": ["https://github.com/jcongaku/SyncHz"]
 }
 </script>
 <script type="application/ld+json">
@@ -79,8 +79,8 @@
       <a class="wide" href="#workbench">工作原理</a>
       <a class="wide" href="#install">安装</a>
       <a href="../" hreflang="en" lang="en">English</a>
-      <a class="wide" href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a>
-      <a class="get" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">下载</a>
+      <a class="wide" href="https://github.com/jcongaku/SyncHz">GitHub</a>
+      <a class="get" href="https://github.com/jcongaku/SyncHz/releases/latest">下载</a>
     </nav>
   </div>
 </header>
@@ -92,11 +92,11 @@
         <h1>每一首 Apple&nbsp;Music，<br>都用它自己的<wbr>采样率播放。</h1>
         <p class="lede">同频是一款免费的 Mac 菜单栏工具。它会把你的解码器自动切换到 Apple Music 正在播放的曲目采样率，从 44.1 到 192 kHz，让无损和高解析度无损原样到达耳机。需要时，再叠一层能读取 AutoEq 与 PEQdB 预设的耳机均衡。</p>
         <div class="actions">
-          <a class="button primary" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">
+          <a class="button primary" href="https://github.com/jcongaku/SyncHz/releases/latest">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16h12"/></svg>
             下载 Mac 版
           </a>
-          <a class="button" href="https://github.com/jcongaku/apple-music-lossless-eq">在 GitHub 查看源码</a>
+          <a class="button" href="https://github.com/jcongaku/SyncHz">在 GitHub 查看源码</a>
         </div>
         <p class="fine">免费开源。需要 macOS 15 或更高版本，支持 Apple 芯片与 Intel。</p>
       </div>
@@ -232,7 +232,7 @@
     <div class="wrap">
       <h2 id="install-title">一分钟装好。</h2>
       <ol class="steps">
-        <li><div><h3>下载应用</h3><p>从 <a href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">GitHub Releases</a> 下载最新的 <code>.dmg</code>，把 SyncHz 拖进「应用程序」。</p></div></li>
+        <li><div><h3>下载应用</h3><p>从 <a href="https://github.com/jcongaku/SyncHz/releases/latest">GitHub Releases</a> 下载最新的 <code>.dmg</code>，把 SyncHz 拖进「应用程序」。</p></div></li>
         <li><div><h3>允许首次打开</h3><p>同频暂未经过苹果公证，macOS 会拦下第一次打开。在「终端」里运行一次：</p>
           <div class="code"><code>xattr -dr com.apple.quarantine /Applications/SyncHz.app</code><button class="copy" type="button" data-label="复制" data-copied="已复制">复制</button></div></div></li>
         <li><div><h3>在 Apple Music 里放一首歌</h3><p>按提示允许同频控制「音乐」。第一次打开均衡时会请求音频权限，用来让 tap 接收 Apple Music 的声音；你的麦克风永远不会被录制。</p></div></li>
@@ -258,7 +258,7 @@
 <footer class="foot">
   <div class="wrap">
     <p>同频 SyncHz 以 MIT 协议开源，由一位乐迷独立制作，站在 <a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a>、<a href="https://github.com/jaakkopasanen/AutoEq">AutoEq</a> 与 <a href="https://peqdb.com/">PEQdB</a> 的肩膀上。Apple Music 是 Apple Inc. 的商标，同频与 Apple 无关联。</p>
-    <nav aria-label="页脚"><a href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a><a href="https://github.com/jcongaku/apple-music-lossless-eq/releases">版本发布</a><a href="../" hreflang="en" lang="en">English</a></nav>
+    <nav aria-label="页脚"><a href="https://github.com/jcongaku/SyncHz">GitHub</a><a href="https://github.com/jcongaku/SyncHz/releases">版本发布</a><a href="../" hreflang="en" lang="en">English</a></nav>
   </div>
 </footer>
 <script src="../site.js" defer></script>

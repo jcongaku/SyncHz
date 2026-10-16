@@ -12,9 +12,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest"><b>Download for Mac</b></a>
+  <a href="https://github.com/jcongaku/SyncHz/releases/latest"><b>Download for Mac</b></a>
   &nbsp;·&nbsp;
-  <a href="https://jcongaku.github.io/apple-music-lossless-eq/">Website</a>
+  <a href="https://jcongaku.github.io/SyncHz/">Website</a>
   &nbsp;·&nbsp;
   <a href="#中文简介">中文</a>
 </p>
@@ -22,7 +22,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-15%2B-18181A" alt="macOS 15 or later">
   <img src="https://img.shields.io/badge/Apple%20Music-Hi--Res%20Lossless-646C36" alt="For Apple Music Hi-Res Lossless">
-  <img src="https://img.shields.io/github/downloads/jcongaku/apple-music-lossless-eq/total?color=4F6373&label=downloads" alt="Downloads">
+  <img src="https://img.shields.io/github/downloads/jcongaku/SyncHz/total?color=4F6373&label=downloads" alt="Downloads">
   <img src="https://img.shields.io/badge/license-MIT-3E8758" alt="MIT License">
 </p>
 
@@ -125,7 +125,7 @@ macOS has no supported API for "the sample rate of the track that is playing", s
 
 ## Install
 
-1. Download the latest `.dmg` from [Releases](https://github.com/jcongaku/apple-music-lossless-eq/releases/latest) and drag **SyncHz** into Applications.
+1. Download the latest `.dmg` from [Releases](https://github.com/jcongaku/SyncHz/releases/latest) and drag **SyncHz** into Applications.
 2. SyncHz is not notarized yet, so macOS will refuse the first launch. Clear the quarantine flag once:
    ```bash
    xattr -dr com.apple.quarantine /Applications/SyncHz.app
@@ -160,8 +160,8 @@ SyncHz makes one network request: once per launch it asks `api.github.com` for t
 ## Build from source
 
 ```bash
-git clone https://github.com/jcongaku/apple-music-lossless-eq.git
-cd apple-music-lossless-eq
+git clone https://github.com/jcongaku/SyncHz.git
+cd SyncHz
 open SampleRateSwitcher.xcodeproj
 ```
 
@@ -195,7 +195,7 @@ Apple Music 的无损与高解析度无损（Hi-Res Lossless）曲目有 44.1、
 - **忠实还原 AutoEq 与 PEQdB。** 使用与两者相同的 RBJ 双二阶滤波器和搁架 Q 定义。生成器只在一个采样率下拟合参数：AutoEq 公开预设是 44.1 kHz，PEQdB 是 48 kHz。同一组参数拿到 96 或 192 kHz 播放，高频会偏移 1.9 dB，PEQdB 实测最高偏移 4.3 dB。同频会在当前播放采样率下逐段重新拟合，误差降到 **约 0.04 dB**。
 - **不装驱动也能处理 Apple Music。** 使用 macOS 14.4 起提供的 Core Audio process tap。开启 EQ 后不再是 bit-perfect，面板会明确标注；关闭 EQ 时同频完全不经手音频。
 
-**安装：** 从 [Releases](https://github.com/jcongaku/apple-music-lossless-eq/releases/latest) 下载 `.dmg`，拖入「应用程序」。因暂未公证，首次打开前请在终端执行：
+**安装：** 从 [Releases](https://github.com/jcongaku/SyncHz/releases/latest) 下载 `.dmg`，拖入「应用程序」。因暂未公证，首次打开前请在终端执行：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/SyncHz.app

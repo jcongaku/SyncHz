@@ -25,7 +25,7 @@ final class UpdateChecker {
 
     /// Public, unauthenticated endpoint. `releases/latest` already excludes
     /// drafts and prereleases, so a tagged beta never reaches users here.
-    private let feedURL = URL(string: "https://api.github.com/repos/jcongaku/apple-music-lossless-eq/releases/latest")!
+    private let feedURL = URL(string: "https://api.github.com/repos/jcongaku/SyncHz/releases/latest")!
     private let launchDelay: TimeInterval = 5
     private let session: URLSession
     @ObservationIgnored private var hasCheckedAtLaunch = false
@@ -111,7 +111,7 @@ final class UpdateChecker {
         }
 
         let page = (json["html_url"] as? String).flatMap(URL.init(string:))
-            ?? URL(string: "https://github.com/jcongaku/apple-music-lossless-eq/releases/latest")!
+            ?? URL(string: "https://github.com/jcongaku/SyncHz/releases/latest")!
         return .available(version: latest, url: page)
     }
 
