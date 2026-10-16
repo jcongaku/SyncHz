@@ -1,0 +1,8 @@
+/* SyncHz — Brazilian Portuguese */
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "O SyncHz precisa acessar o Apple Music para ler a faixa atual e controlar a reprodução.";
+NSAppleMusicUsageDescription = "O SyncHz precisa acessar as informações de reprodução do Apple Music.";
+NSMediaLibraryUsageDescription = "O SyncHz precisa acessar sua biblioteca de mídia para ler os metadados do que está tocando.";
+NSAudioCaptureUsageDescription = "O SyncHz captura o áudio do Apple Music para aplicar o EQ dos seus fones de ouvido antes que ele chegue ao dispositivo de saída.";
+NSMicrophoneUsageDescription = "O SyncHz precisa de acesso à entrada de áudio para receber o som do Apple Music para o EQ de fones de ouvido. Ele nunca grava seu microfone.";

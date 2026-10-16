@@ -8,7 +8,15 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     // Latin-script languages first, then the rest.
     case system
     case english = "en"
+    case german = "de"
+    case spanish = "es"
+    case french = "fr"
+    case italian = "it"
+    case dutch = "nl"
+    case portugueseBrazil = "pt-BR"
+    case russian = "ru"
     case japanese = "ja"
+    case korean = "ko"
     case simplifiedChinese = "zh-Hans"
     case traditionalChinese = "zh-Hant"
 
@@ -27,7 +35,15 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         switch self {
         case .system: return ""
         case .english: return "English"
+        case .german: return "Deutsch"
+        case .spanish: return "Español"
+        case .french: return "Français"
+        case .italian: return "Italiano"
+        case .dutch: return "Nederlands"
+        case .portugueseBrazil: return "Português (Brasil)"
+        case .russian: return "Русский"
         case .japanese: return "日本語"
+        case .korean: return "한국어"
         case .simplifiedChinese: return "简体中文"
         case .traditionalChinese: return "繁體中文"
         }

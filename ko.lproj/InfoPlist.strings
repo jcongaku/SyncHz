@@ -1,0 +1,8 @@
+/* SyncHz — Korean */
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "SyncHz가 현재 트랙을 읽고 재생을 제어하려면 Apple Music에 접근해야 합니다.";
+NSAppleMusicUsageDescription = "SyncHz에 Apple Music 재생 정보 접근 권한이 필요합니다.";
+NSMediaLibraryUsageDescription = "SyncHz가 현재 재생 중인 항목의 메타데이터를 읽으려면 미디어 보관함에 접근해야 합니다.";
+NSAudioCaptureUsageDescription = "SyncHz는 Apple Music의 오디오가 출력 기기에 도달하기 전에 이를 받아 헤드폰 EQ를 적용합니다.";
+NSMicrophoneUsageDescription = "SyncHz가 헤드폰 EQ에 사용할 Apple Music 사운드를 받으려면 오디오 입력 접근 권한이 필요합니다. 마이크 음성은 절대 녹음하지 않습니다.";

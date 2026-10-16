@@ -1,0 +1,8 @@
+/* SyncHz — Russian */
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "Приложению SyncHz нужен доступ к Apple Music, чтобы определять текущий трек и управлять воспроизведением.";
+NSAppleMusicUsageDescription = "Приложению SyncHz нужен доступ к информации о воспроизведении в Apple Music.";
+NSMediaLibraryUsageDescription = "Приложению SyncHz нужен доступ к медиатеке, чтобы считывать метаданные текущего трека.";
+NSAudioCaptureUsageDescription = "SyncHz перехватывает звук Apple Music, чтобы применить EQ для наушников до того, как звук попадёт на устройство вывода.";
+NSMicrophoneUsageDescription = "Приложению SyncHz нужен доступ к аудиовходу, чтобы получать звук Apple Music для EQ наушников. Микрофон никогда не записывается.";

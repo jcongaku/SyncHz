@@ -1,0 +1,8 @@
+/* SyncHz — Dutch */
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "SyncHz heeft toegang tot Apple Music nodig om het huidige nummer te lezen en het afspelen te regelen.";
+NSAppleMusicUsageDescription = "SyncHz heeft toegang nodig tot de afspeelinformatie van Apple Music.";
+NSMediaLibraryUsageDescription = "SyncHz heeft toegang tot je mediabibliotheek nodig om de metadata van het huidige nummer te lezen.";
+NSAudioCaptureUsageDescription = "SyncHz onderschept de audio van Apple Music om je koptelefoon-EQ toe te passen voordat deze je uitvoerapparaat bereikt.";
+NSMicrophoneUsageDescription = "SyncHz heeft toegang tot audio-invoer nodig om het geluid van Apple Music voor de koptelefoon-EQ te ontvangen. Je microfoon wordt nooit opgenomen.";

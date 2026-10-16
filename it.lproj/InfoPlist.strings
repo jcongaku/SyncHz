@@ -1,0 +1,8 @@
+/* SyncHz — Italian */
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "SyncHz richiede l’accesso ad Apple Music per leggere il brano corrente e controllare la riproduzione.";
+NSAppleMusicUsageDescription = "SyncHz richiede l’accesso alle informazioni di riproduzione di Apple Music.";
+NSMediaLibraryUsageDescription = "SyncHz richiede l’accesso alla libreria multimediale per leggere i metadati del brano in riproduzione.";
+NSAudioCaptureUsageDescription = "SyncHz intercetta l’audio di Apple Music per applicare l’EQ delle cuffie prima che raggiunga il dispositivo di uscita.";
+NSMicrophoneUsageDescription = "SyncHz richiede l’accesso all’ingresso audio per ricevere il suono di Apple Music per l’EQ delle cuffie. Non registra mai il microfono.";
