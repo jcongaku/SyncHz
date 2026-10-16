@@ -71,6 +71,46 @@ final class LogStreamControllerTests: XCTestCase {
         ]), [48000, 44100, 96000])
     }
 
+    func testActiveFormatLineYieldsCodecBitDepthAndTier() {
+        // Shape of the line as captured from Music.app's log on macOS 27.
+        let line = "|2026-10-15 02:38:23.882-0400 mus:nePSnYoK7  4 ┃┃┃┃  ╲╭ activeFormat: tier: Lossless; "
+            + "groupID: audio-alac-stereo-48000-24; bitDepth: 24-bit; sampleRate: 48kh"
+        let format = TrackFormat(logMessage: line)
+        XCTAssertEqual(format?.codec, "ALAC")
+        XCTAssertEqual(format?.bitDepth, 24)
+        XCTAssertEqual(format?.tier, "Lossless")
+
+        // The same line still votes for its sample rate.
+        XCTAssertEqual(sampleRates(from: [line]), [48000])
+    }
+
+    func testActiveFormatTierSpellingsAreNormalised() {
+        XCTAssertEqual(TrackFormat(logMessage: "activeFormat: tier: HiResLossless; bitDepth: 24-bit")?.tier,
+                       "Hi-Res Lossless")
+        XCTAssertEqual(TrackFormat(logMessage: "activeFormat: tier: Hi-Res Lossless")?.tier,
+                       "Hi-Res Lossless")
+        // A tier equal to the codec is not repeated.
+        let atmos = TrackFormat(logMessage: "activeFormat: tier: Atmos; groupID: audio-atmos-2048")
+        XCTAssertEqual(atmos?.codec, "Dolby Atmos")
+        XCTAssertNil(atmos?.tier)
+    }
+
+    func testFormatLessLinesAreIgnored() {
+        XCTAssertNil(TrackFormat(logMessage: "sample rate: 44100"))
+        XCTAssertNil(TrackFormat(logMessage: "activeFormat: nothing useful here"))
+        // An unknown group ID is not guessed at.
+        XCTAssertNil(TrackFormat(logMessage: "activeFormat: groupID: audio-mystery-48000")?.codec)
+    }
+
+    func testActiveFormatIsReportedThroughTheCallback() {
+        let controller = LogStreamController()
+        var formats: [TrackFormat] = []
+        controller.onTrackFormat = { formats.append($0) }
+        controller.handleLogLine(#"{"eventMessage":"activeFormat: tier: Lossless; groupID: audio-alac-stereo-44100-16; bitDepth: 16-bit; sampleRate: 44.1kh"}"#)
+        XCTAssertEqual(formats.count, 1)
+        XCTAssertEqual(formats.first?.bitDepth, 16)
+    }
+
     private func sampleRates(from lines: [String]) -> [Double] {
         let controller = LogStreamController()
         var rates: [Double] = []

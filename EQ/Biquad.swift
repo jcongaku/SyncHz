@@ -220,6 +220,32 @@ enum PEQResponse {
         }
     }
 
+    /// Attenuation that keeps the cascade actually being played — after rate
+    /// matching, possibly with split bands — below full scale. Checked from
+    /// 10 Hz, because low-shelf plateaus keep boosting below 20 Hz where music
+    /// still has energy (peqdb ships +14.5 dB shelves at 30 Hz), up to 24 kHz.
+    static func requiredAutomaticHeadroomDB(sections: [BiquadCoefficients],
+                                            preampDB: Double,
+                                            sampleRate: Double,
+                                            marginDB: Double = 0.2) -> Double {
+        guard sampleRate > 0 else { return 0 }
+        let lower = 10.0
+        let upper = min(24_000, 0.45 * sampleRate)
+        let count = 4_096
+        var maximum = -Double.infinity
+        for index in 0..<count {
+            let frequency = lower * pow(upper / lower, Double(index) / Double(count - 1))
+            var db = preampDB
+            for section in sections {
+                let magnitude = section.magnitude(atFrequency: frequency, sampleRate: sampleRate)
+                if magnitude > 0 { db += 20 * log10(magnitude) }
+            }
+            if db.isFinite { maximum = max(maximum, db) }
+        }
+        let overload = max(0, maximum)
+        return overload > 0 ? overload + max(0, marginDB) : 0
+    }
+
     /// Conservative attenuation needed to keep the steady-state response below
     /// full scale. The final processor clamp remains as a last-resort guard for
     /// transients, but normal PEQ boosts should be handled here without clipping.

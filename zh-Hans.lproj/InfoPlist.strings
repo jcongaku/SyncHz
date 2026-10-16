@@ -1,5 +1,7 @@
-CFBundleDisplayName = "调律";
-CFBundleName = "调律";
-NSAppleEventsUsageDescription = "调律需要访问 Apple Music 以读取当前曲目并控制播放。";
-NSAppleMusicUsageDescription = "调律需要访问 Apple Music 的播放信息。";
-NSMediaLibraryUsageDescription = "调律需要访问您的媒体库以读取正在播放的元数据。";
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "SyncHz 需要访问 Apple Music 以读取当前曲目并控制播放。";
+NSAppleMusicUsageDescription = "SyncHz 需要访问 Apple Music 的播放信息。";
+NSMediaLibraryUsageDescription = "SyncHz 需要访问您的媒体库以读取正在播放的元数据。";
+NSAudioCaptureUsageDescription = "SyncHz 会截取 Apple Music 的音频，在送达输出设备前应用您的耳机均衡。";
+NSMicrophoneUsageDescription = "SyncHz 需要音频输入权限来接收 Apple Music 的声音以应用耳机均衡，不会录制你的麦克风。";

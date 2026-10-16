@@ -2,97 +2,96 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-// MARK: - Palette (matches GlassPanelView's 和風 language)
-
-private enum EQWashi {
-    static let rikyu = Color(red: 0.45, green: 0.47, blue: 0.26)    // 利休 — wabi-sabi green-gold
-    static let ai = Color(red: 0.31, green: 0.39, blue: 0.45)       // 藍鼠 — muted indigo-grey
-}
-
-// MARK: - Equalizer window
+// MARK: - Equalizer panel
 
 struct EQView: View {
-    @ObservedObject var eq: EQModel
+    @Bindable var eq: EQModel
     @State private var selectedBand: PEQBand.ID?
 
     var body: some View {
         VStack(spacing: 0) {
             toolbar
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-            Divider()
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
             EQGraph(profile: $eq.profile,
                     analyzer: eq.analyzer,
                     selectedBand: $selectedBand,
-                    sampleRate: eq.currentSampleRate ?? 48_000)
+                    // The design-rate response is what plays at every
+                    // device rate (see PEQRateMatcher), so it is what we draw.
+                    sampleRate: eq.profile.designSampleRate)
                 .frame(height: 220)
-                .padding(12)
+                .padding(.horizontal, 14)
             hint
-            Divider()
+                .padding(.top, 6)
+                .padding(.bottom, 8)
+            Hairline()
             bandTable
                 .frame(height: 160)
+            Hairline()
             statusBar
         }
         .frame(width: 470)
     }
 
-    // MARK: Toolbar (two rows)
+    // MARK: Toolbar (three rows)
+
+    /// The first two rows share two columns: title over the profile menu, and
+    /// "Fitted at" — a property of the preset's parameters — over its name.
+    private static let profileColumn: CGFloat = 130
+    private static let nameColumn: CGFloat = 140
+    private static let columnSpacing: CGFloat = 8
 
     private var toolbar: some View {
         VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("PARAMETRIC EQ")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(2.5)
-                    Text("パラメトリック・イコライザー")
-                        .font(.system(size: 9))
-                        .tracking(0.5)
-                        .foregroundStyle(.secondary)
-                }
+            HStack(alignment: .center, spacing: Self.columnSpacing) {
+                Text("Parametric EQ")
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(width: Self.profileColumn, alignment: .leading)
+
+                designRateMenu
 
                 Spacer()
 
-                // Fixed-width slot so toggling the engine never reflows the row.
-                Label(eq.currentSampleRate.map { sampleRateText($0) } ?? "—",
-                      systemImage: "waveform.path")
-                    .font(.system(size: 11).monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .opacity(eq.currentSampleRate == nil ? 0 : 1)
-                    .frame(width: 84, alignment: .trailing)
+                processingRateMenu
 
                 Toggle("", isOn: Binding(get: { eq.isEnabled },
                                          set: { eq.setEnabled($0) }))
                     .toggleStyle(.switch)
-                    .tint(EQWashi.rikyu)
+                    .controlSize(.small)
+                    .tint(Theme.accent)
                     .labelsHidden()
                     .accessibilityLabel("Equalizer")
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Self.columnSpacing) {
                 profileMenu
                 TextField("Profile name", text: $eq.profile.name)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 132)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 8)
+                    .frame(width: Self.nameColumn, height: 26)
+                    .background(Theme.card,
+                                in: RoundedRectangle(cornerRadius: Theme.controlRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.controlRadius, style: .continuous)
+                            .strokeBorder(Theme.hairline, lineWidth: 0.5)
+                    )
 
                 Spacer()
 
                 Button { importAutoEQ() } label: {
                     Image(systemName: "square.and.arrow.down")
-                        .frame(width: 42, height: 26)
-                        .glassEffect(.regular, in: Capsule())
-                        .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ToolButtonStyle())
                 .help("Import AutoEQ…")
                 .accessibilityLabel("Import AutoEQ…")
                 Button { eq.addBand() } label: {
                     Image(systemName: "plus")
-                        .frame(width: 42, height: 26)
-                        .glassEffect(.regular, in: Capsule())
-                        .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ToolButtonStyle())
                 .disabled(eq.profile.bands.count >= PEQConstraints.maximumBands)
                 .help(eq.profile.bands.count >= PEQConstraints.maximumBands
                       ? "Maximum \(PEQConstraints.maximumBands) bands"
@@ -100,31 +99,97 @@ struct EQView: View {
                 .accessibilityLabel("Add")
                 Button { eq.resetFlat() } label: {
                     Image(systemName: "arrow.counterclockwise")
-                        .frame(width: 42, height: 26)
-                        .glassEffect(.regular, in: Capsule())
-                        .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ToolButtonStyle())
                 .help("Flat")
                 .accessibilityLabel("Flat")
             }
 
             HStack(spacing: 10) {
-                Text("Preamp").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("Preamp")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textMuted)
                 Slider(value: $eq.profile.preampDB, in: -24...12)
-                    .tint(EQWashi.rikyu)
+                    .controlSize(.small)
+                    .tint(Theme.accent)
                 Text(String(format: "%+.1f dB", eq.profile.preampDB))
                     .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
                     .frame(width: 56, alignment: .trailing)
                 if eq.automaticHeadroomDB > 0.05 {
                     Label(String(format: "Auto −%.1f", eq.automaticHeadroomDB),
                           systemImage: "shield.lefthalf.filled")
-                        .font(.system(size: 9, weight: .medium).monospacedDigit())
-                        .foregroundStyle(EQWashi.rikyu)
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                        .foregroundStyle(Theme.accent)
                         .help("Automatic headroom prevents output clipping")
                 }
             }
         }
+    }
+
+    /// Follow each track's rate (no resampling; the EQ path is rebuilt at
+    /// every rate change) or hold the output at 48 kHz while the EQ runs.
+    private var processingRateMenu: some View {
+        Menu {
+            Picker("Processing rate", selection: $eq.holdsFixedRate) {
+                Text("Follow track rate").tag(false)
+                Text("Hold at \(sampleRateText(ProcessTapEngine.processingRate))").tag(true)
+            }
+            .pickerStyle(.inline)
+        } label: {
+            // Fixed width so toggling the engine never reflows the row.
+            HStack(spacing: 4) {
+                Image(systemName: eq.holdsFixedRate ? "lock" : "waveform.path")
+                Text(eq.currentSampleRate.map { sampleRateText($0) } ?? "—")
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .font(.system(size: 11).monospacedDigit())
+            .foregroundStyle(Theme.textMuted)
+            .frame(width: 86, alignment: .trailing)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(eq.holdsFixedRate ? Text("Hold at \(sampleRateText(ProcessTapEngine.processingRate))")
+                                : Text("Follow track rate"))
+    }
+
+    /// The rate the preset's parameters were fitted at. SyncHz reproduces that
+    /// rate's response at every playback rate, so this must match the
+    /// generator: 44.1 kHz for AutoEq's published presets.
+    private var designRateMenu: some View {
+        Menu {
+            Picker("Fitted at", selection: $eq.profile.designSampleRate) {
+                ForEach(PEQConstraints.designRates, id: \.self) { rate in
+                    Text(verbatim: sampleRateText(rate)).tag(rate)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 4) {
+                Text("Fitted at \(sampleRateText(eq.profile.designSampleRate))")
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Theme.textMuted)
+            }
+            .font(.system(size: 12).monospacedDigit())
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.horizontal, 8)
+            .frame(width: Self.nameColumn, height: 26)
+            .background(Theme.fill,
+                        in: RoundedRectangle(cornerRadius: Theme.controlRadius, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("The sample rate this preset was fitted at — 44.1 kHz for AutoEq's published presets. SyncHz reproduces this response at every playback rate.")
     }
 
     private var profileMenu: some View {
@@ -148,17 +213,36 @@ struct EQView: View {
             }
             .disabled(eq.profiles.count <= 1)
         } label: {
-            Label(eq.profile.name, systemImage: "list.bullet")
+            HStack(spacing: 5) {
+                Image(systemName: "list.bullet")
+                    .foregroundStyle(Theme.textMuted)
+                Text(eq.profile.name)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Theme.textMuted)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 8)
+            // Fixed width, so the name field beside it — and "Fitted at" above
+            // that — stay in one column whatever the profile is called.
+            .frame(width: Self.profileColumn, height: 26)
+            .background(Theme.fill,
+                        in: RoundedRectangle(cornerRadius: Theme.controlRadius, style: .continuous))
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
-        .frame(maxWidth: 124)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .frame(width: Self.profileColumn, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var hint: some View {
         Text("Drag: frequency × gain · Hover point + scroll: Q · Shift: fine")
-            .font(.system(size: 9))
-            .foregroundStyle(.secondary)
-            .padding(.bottom, 2)
+            .font(.system(size: 10))
+            .foregroundStyle(Theme.textMuted)
     }
 
     // MARK: Band table
@@ -171,38 +255,42 @@ struct EQView: View {
                             isSelected: selectedBand == band.id,
                             onSelect: { selectedBand = band.id },
                             onDelete: { eq.removeBand(band.id) })
-                    Divider().opacity(0.4)
+                    Hairline().padding(.horizontal, 8)
                 }
                 if eq.profile.bands.isEmpty {
                     Text("No bands. Add one, or import an AutoEQ ParametricEQ.txt.")
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textMuted)
                         .padding(.vertical, 24)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
     }
 
     private var statusBar: some View {
-        HStack {
+        HStack(spacing: 7) {
             Circle()
-                .fill(eq.clippingDetected ? Color.orange
-                      : (eq.isEnabled ? EQWashi.rikyu : Color.secondary.opacity(0.5)))
-                .frame(width: 7, height: 7)
-            Text(eq.clippingDetected
-                 ? String(localized: "Output peak protected — lower boost or preamp")
-                 : eq.statusMessage.isEmpty
-                 ? (eq.isEnabled ? String(localized: "Equalizer active")
-                                 : String(localized: "Bypassed — bit-perfect"))
-                 : eq.statusMessage)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+                .fill(eq.clippingDetected ? Theme.warn
+                      : (eq.isEnabled ? Theme.accent : Theme.textMuted.opacity(0.6)))
+                .frame(width: 6, height: 6)
+            statusText
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.textMuted)
                 .lineLimit(1)
             Spacer()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 9)
+    }
+
+    /// Fixed captions go through `Text` so they follow the in-app language;
+    /// the model's message is already localized when it is made.
+    private var statusText: Text {
+        if eq.clippingDetected { return Text("Output peak protected — lower boost or preamp") }
+        if !eq.statusMessage.isEmpty { return Text(verbatim: eq.statusMessage) }
+        return eq.isEnabled ? Text("Equalizer active") : Text("Bypassed — bit-perfect")
     }
 
     // MARK: Actions / helpers
@@ -212,9 +300,9 @@ struct EQView: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.plainText, .text]
-        panel.message = String(localized: "Choose an AutoEQ ParametricEQ.txt file")
+        panel.message = L10n.string("Choose an AutoEQ ParametricEQ.txt file")
 
-        // Choritsu runs as a menu-bar accessory app, so it's never the active
+        // SyncHz runs as a menu-bar accessory app, so it's never the active
         // app — without this the open panel opens *behind* the frontmost app.
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url {
@@ -240,7 +328,10 @@ private struct BandRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Toggle("", isOn: $band.isEnabled).labelsHidden().tint(EQWashi.rikyu)
+            Toggle("", isOn: $band.isEnabled)
+                .toggleStyle(.checkbox)
+                .labelsHidden()
+                .tint(Theme.accent)
 
             Picker("", selection: $band.type) {
                 ForEach(PEQFilterType.allCases) { type in
@@ -248,24 +339,25 @@ private struct BandRow: View {
                 }
             }
             .labelsHidden()
-            .frame(width: 120)
+            .controlSize(.small)
+            .frame(width: 104)
 
-            field("Freq", value: $band.frequency, unit: "Hz", width: 70)
-            field("Gain", value: $band.gainDB, unit: "dB", width: 60)
-            field("Q", value: $band.q, unit: "", width: 50)
+            field("Freq", value: $band.frequency, unit: "Hz", width: 64)
+            field("Gain", value: $band.gainDB, unit: "dB", width: 50)
+            field("Q", value: $band.q, unit: "", width: 44)
 
             Spacer()
 
             Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash").font(.system(size: 11))
+                Image(systemName: "trash")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(GhostButtonStyle(size: 24))
             .accessibilityLabel("Delete")
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 8)
-        .background(isSelected ? EQWashi.rikyu.opacity(0.12) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(isSelected ? Theme.accent.opacity(0.10) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
         .opacity(band.isEnabled ? 1 : 0.45)
@@ -281,16 +373,22 @@ private struct BandRow: View {
 
     private func field(_ label: LocalizedStringKey, value: Binding<Double>,
                        unit: String, width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.system(size: 8)).foregroundStyle(.secondary)
-            HStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(Theme.textMuted)
+            HStack(spacing: 3) {
                 TextField("", value: value, format: .number.precision(.fractionLength(0...2)))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: width)
+                    .textFieldStyle(.plain)
                     .font(.system(size: 11).monospacedDigit())
+                    .padding(.horizontal, 6)
+                    .frame(width: width, height: 22)
+                    .background(Theme.fill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                     .accessibilityLabel(label)
                 if !unit.isEmpty {
-                    Text(unit).font(.system(size: 8)).foregroundStyle(.secondary)
+                    Text(unit)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Theme.textMuted)
                 }
             }
         }
@@ -353,11 +451,12 @@ private struct EQGraph: View {
                             isFineAdjustment: isFineAdjustment)
                 }
             )
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(colorScheme == .dark ? Color.black.opacity(0.25) : Color.white.opacity(0.4))
+            .background(Theme.card)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous)
+                    .strokeBorder(Theme.hairline, lineWidth: 0.5)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -382,7 +481,7 @@ private struct EQGraph: View {
                            lineWidth: g == 0 ? 0.9 : 0.5)
         }
         for (f, label) in [(100.0, "100"), (1000.0, "1k"), (10000.0, "10k")] {
-            context.draw(Text(label).font(.system(size: 8)).foregroundStyle(.secondary),
+            context.draw(Text(label).font(.system(size: 9)).foregroundStyle(Theme.textMuted),
                          at: CGPoint(x: xPos(f, width: size.width), y: size.height - 8))
         }
     }
@@ -397,7 +496,7 @@ private struct EQGraph: View {
                             y: yPos(point.db, height: size.height))
             if index == 0 { line.move(to: p) } else { line.addLine(to: p) }
         }
-        context.stroke(line, with: .color(EQWashi.rikyu), lineWidth: 2)
+        context.stroke(line, with: .color(Theme.accent), lineWidth: 2)
     }
 
     // MARK: Handles
@@ -416,20 +515,23 @@ private struct EQGraph: View {
         let position = CGPoint(x: xPos(controlFrequency, width: size.width),
                                y: yPos(controlDB, height: size.height))
         return ZStack {
+            // Flat handles: a card-coloured ring separates the dot from the
+            // curve instead of a drop shadow.
             Circle()
-                .fill(EQWashi.rikyu.opacity(isSelected ? 1 : 0.72))
-                .overlay(Circle().stroke(.white.opacity(0.92), lineWidth: isSelected ? 2 : 1))
-                .shadow(color: .black.opacity(isSelected ? 0.22 : 0.10), radius: isSelected ? 4 : 2, y: 1)
-                .frame(width: isSelected ? 18 : 14, height: isSelected ? 18 : 14)
+                .fill(Theme.accent.opacity(isSelected ? 1 : 0.8))
+                .overlay(Circle().strokeBorder(Theme.card, lineWidth: isSelected ? 2.5 : 1.5))
+                .overlay(Circle().strokeBorder(Theme.accent.opacity(isSelected ? 0.45 : 0), lineWidth: 1)
+                    .padding(-2))
+                .frame(width: isSelected ? 16 : 13, height: isSelected ? 16 : 13)
 
             if isSelected {
                 Text(String(format: "Q %.2f", value.q))
                     .font(.system(size: 9, weight: .medium).monospacedDigit())
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 6)
                     .frame(height: 19)
-                    .background(.regularMaterial, in: Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5))
+                    .background(Theme.card, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 0.5))
                     .offset(y: position.y < 34 ? 25 : -25)
                     .allowsHitTesting(false)
             }
@@ -603,27 +705,46 @@ private struct EQGraph: View {
 
 // MARK: - Spectrum layer
 
-/// The live spectrum fill. Isolated in its own view that observes the analyzer,
-/// so its ~24 fps repaints don't invalidate the static grid + curve `Canvas`
-/// stacked above it.
+/// The live spectrum as 1/3-octave bars laid side by side like piano keys:
+/// no gaps, and alternate bands a shade apart, so neighbours read as distinct
+/// layers without a separator line. Isolated in its own view that observes
+/// the analyzer, so its ~24 fps repaints don't invalidate the static grid +
+/// curve `Canvas` stacked above it. Light and dark keys are one path each:
+/// two fills per frame, whatever the band count.
+///
+/// Bands are log-spaced over 20 Hz–20 kHz like the graph's x axis, so each
+/// bar sits exactly under the frequencies it measures.
 private struct SpectrumView: View {
-    @ObservedObject var analyzer: SpectrumAnalyzer
+    var analyzer: SpectrumAnalyzer
     let colorScheme: ColorScheme
 
     var body: some View {
         Canvas { context, size in
             let levels = analyzer.levels
-            guard levels.count > 1 else { return }
-            var path = Path()
-            path.move(to: CGPoint(x: 0, y: size.height))
-            for i in levels.indices {
-                let x = CGFloat(i) / CGFloat(levels.count - 1) * size.width
-                let y = size.height - CGFloat(levels[i]) * size.height
-                path.addLine(to: CGPoint(x: x, y: y))
+            guard !levels.isEmpty else { return }
+
+            // Topping out below the graph's edge keeps the spectrum a backdrop
+            // to the EQ curve rather than a wall.
+            let slot = size.width / CGFloat(levels.count)
+            let ceiling = size.height * 0.82
+            var lightKeys = Path()
+            var darkKeys = Path()
+            for index in levels.indices {
+                let height = CGFloat(levels[index]) * ceiling
+                guard height >= 0.5 else { continue }
+                let key = CGRect(x: CGFloat(index) * slot, y: size.height - height,
+                                 width: slot, height: height)
+                if index.isMultiple(of: 2) {
+                    lightKeys.addRoundedRect(in: key, cornerSize: CGSize(width: 1.5, height: 1.5),
+                                             style: .continuous)
+                } else {
+                    darkKeys.addRoundedRect(in: key, cornerSize: CGSize(width: 1.5, height: 1.5),
+                                            style: .continuous)
+                }
             }
-            path.addLine(to: CGPoint(x: size.width, y: size.height))
-            path.closeSubpath()
-            context.fill(path, with: .color(EQWashi.ai.opacity(colorScheme == .dark ? 0.35 : 0.22)))
+            let dark = colorScheme == .dark
+            context.fill(lightKeys, with: .color(Theme.indigo.opacity(dark ? 0.17 : 0.09)))
+            context.fill(darkKeys, with: .color(Theme.indigo.opacity(dark ? 0.30 : 0.17)))
         }
     }
 }

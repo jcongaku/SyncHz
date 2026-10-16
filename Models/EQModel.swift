@@ -1,47 +1,100 @@
 import Foundation
 import AppKit
+import AVFoundation
+import Observation
+
+/// While the EQ runs, the output device belongs to it: the engine holds the
+/// device at its processing rate, and automatic or manual sample-rate
+/// switching stands aside (`SampleRateModel` checks this). Main thread only.
+@Observable
+final class OutputRateLock {
+    static let shared = OutputRateLock()
+    /// The rate the EQ holds the output at, or nil while the EQ is off.
+    var heldRate: Double?
+}
 
 /// Owns the EQ profile library, drives the audio engine and spectrum analyzer,
 /// and persists everything. One instance is shared by the menu-bar panel and
 /// the Equalizer window.
+///
+/// `@Observable`, so a view re-renders only for the properties it reads; the
+/// bookkeeping below is `@ObservationIgnored` and never invalidates anything.
 @MainActor
-final class EQModel: ObservableObject {
-    @Published var profiles: [PEQProfile]
-    @Published var profile: PEQProfile {
+@Observable
+final class EQModel {
+    var profiles: [PEQProfile]
+    var profile: PEQProfile {
         didSet { profileChanged() }
     }
-    @Published private(set) var isEnabled = false
-    @Published private(set) var engineRunning = false
-    @Published private(set) var currentSampleRate: Double?
-    @Published private(set) var automaticHeadroomDB = 0.0
-    @Published private(set) var clippingDetected = false
-    @Published var statusMessage = ""
+    private(set) var isEnabled = false
+    private(set) var engineRunning = false
+    private(set) var currentSampleRate: Double?
+    private(set) var automaticHeadroomDB = 0.0
+    private(set) var clippingDetected = false
+    var statusMessage = ""
 
-    let analyzer = SpectrumAnalyzer()
-    private let engine = ProcessTapEngine()
-    private var saveWork: DispatchWorkItem?
-    private var engineApplyWork: DispatchWorkItem?
-    private var clippingTimer: Timer?
-    private var lastClippingEpoch: UInt64 = 0
-    private var clippingVisibleUntil = Date.distantPast
+    @ObservationIgnored let analyzer = SpectrumAnalyzer()
+    /// Whether the spectrum can be seen: panel on screen with the EQ side
+    /// open. The analyzer's 24 fps FFT and redraws only run then.
+    @ObservationIgnored private var spectrumVisible = false
+
+    /// Hold the output at `ProcessTapEngine.processingRate` (48 kHz) while the
+    /// EQ runs, instead of following each track's rate. Off by default.
+    var holdsFixedRate = UserDefaults.standard.bool(forKey: EQModel.holdsFixedRateKey) {
+        didSet {
+            guard holdsFixedRate != oldValue else { return }
+            UserDefaults.standard.set(holdsFixedRate, forKey: Self.holdsFixedRateKey)
+            if isEnabled {
+                OutputRateLock.shared.heldRate = holdsFixedRate ? ProcessTapEngine.processingRate : nil
+            }
+            let engine = self.engine
+            let hold = holdsFixedRate
+            engine.controlQueue.async { engine.setHoldsProcessingRate(hold) }
+        }
+    }
+    @ObservationIgnored private static let holdsFixedRateKey = "eqHoldsFixedRate"
+    @ObservationIgnored private let engine = ProcessTapEngine()
+    @ObservationIgnored private var saveWork: DispatchWorkItem?
+    @ObservationIgnored private var engineApplyWork: DispatchWorkItem?
+    @ObservationIgnored private var clippingTimer: Timer?
+    @ObservationIgnored private var lastClippingEpoch: UInt64 = 0
+    @ObservationIgnored private var clippingVisibleUntil = Date.distantPast
 
     init() {
         let store = EQModel.load()
         profiles = store.profiles
         profile = store.profiles.first(where: { $0.id == store.selectedID }) ?? store.profiles[0]
+        let hold = holdsFixedRate
+        let engine = self.engine
+        engine.controlQueue.async { engine.setHoldsProcessingRate(hold) }
 
         engine.onSampleRateChange = { [weak self] rate in
             Task { @MainActor in
                 self?.currentSampleRate = rate
                 self?.analyzer.sampleRate = rate
+                if self?.isEnabled == true, self?.holdsFixedRate == true {
+                    OutputRateLock.shared.heldRate = rate
+                }
             }
         }
         engine.onHeadroomChange = { [weak self] attenuation in
-            Task { @MainActor in self?.automaticHeadroomDB = attenuation }
+            Task { @MainActor in
+                guard let self, self.automaticHeadroomDB != attenuation else { return }
+                self.automaticHeadroomDB = attenuation
+            }
+        }
+        engine.onInputSilence = { [weak self] silent in
+            guard let self, self.isEnabled else { return }
+            if silent {
+                self.statusMessage = self.loc("No audio from Apple Music is reaching the EQ.")
+            } else if self.statusMessage == self.loc("No audio from Apple Music is reaching the EQ.") {
+                self.statusMessage = self.loc("Equalizer on — Apple Music is no longer bit-perfect.")
+            }
         }
         engine.onRuntimeError = { [weak self] message in
             Task { @MainActor in
                 guard let self else { return }
+                OutputRateLock.shared.heldRate = nil
                 self.engineRunning = false
                 self.isEnabled = false
                 self.currentSampleRate = nil
@@ -63,29 +116,22 @@ final class EQModel: ObservableObject {
         let analyzer = self.analyzer
 
         if enabled {
-            statusMessage = loc("Equalizer on — Apple Music is no longer bit-perfect.")
-            let snapshot = profile
-            engine.controlQueue.async { [weak self] in
-                engine.setSampleSink(analyzer)
-                engine.apply(profile: snapshot)
-                engine.setActive(true)
-                let started = engine.start()
-                let rate = engine.sampleRate
-                let error = engine.lastError
-                DispatchQueue.main.async {
-                    guard let self, self.isEnabled else { return }   // user may have toggled back off
-                    if started {
-                        self.engineRunning = true
-                        self.currentSampleRate = rate
-                        analyzer.sampleRate = rate
-                        analyzer.start()
-                        self.startClippingMonitoring()
-                    } else {
-                        engine.setSampleSink(nil)
-                        self.isEnabled = false
-                        self.statusMessage = error ?? self.loc("Couldn't start the EQ engine.")
+            // The tap is read through an aggregate device's input, which macOS
+            // gates as audio input (microphone) access. Without it the tap
+            // delivers silence while Music stays muted, so the engine never
+            // starts unless access is granted.
+            switch AVCaptureDevice.authorizationStatus(for: .audio) {
+            case .authorized:
+                startEngine()
+            case .notDetermined:
+                AVCaptureDevice.requestAccess(for: .audio) { granted in
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self, self.isEnabled else { return }
+                        if granted { self.startEngine() } else { self.failAudioInputAccess() }
                     }
                 }
+            default:
+                failAudioInputAccess()
             }
         } else {
             engineRunning = false
@@ -94,15 +140,65 @@ final class EQModel: ObservableObject {
             analyzer.stop()
             stopClippingMonitoring()
             statusMessage = loc("Equalizer off — bit-perfect playback restored.")
+            OutputRateLock.shared.heldRate = nil
             engine.controlQueue.async {
                 engine.setActive(false)
                 engine.stop()
+                engine.restoreOutputRate()
                 engine.setSampleSink(nil)
             }
         }
     }
 
+    private func failAudioInputAccess() {
+        OutputRateLock.shared.heldRate = nil
+        isEnabled = false
+        statusMessage = loc("SyncHz needs audio input access to run the EQ. Allow it in System Settings → Privacy & Security → Microphone.")
+    }
+
+    private func startEngine() {
+        let engine = self.engine
+        let analyzer = self.analyzer
+        statusMessage = loc("Equalizer on — Apple Music is no longer bit-perfect.")
+        // When holding a fixed rate, take the output before the engine changes
+        // it, so automatic switching can't race it back to the track's rate.
+        OutputRateLock.shared.heldRate = holdsFixedRate ? ProcessTapEngine.processingRate : nil
+        let snapshot = profile
+        engine.controlQueue.async { [weak self] in
+            engine.setSampleSink(analyzer)
+            engine.apply(profile: snapshot)
+            engine.setActive(true)
+            let started = engine.start()
+            let rate = engine.sampleRate
+            let error = engine.lastError
+            DispatchQueue.main.async {
+                guard let self, self.isEnabled else { return }   // user may have toggled back off
+                if started {
+                    if self.holdsFixedRate { OutputRateLock.shared.heldRate = rate }
+                    self.engineRunning = true
+                    self.currentSampleRate = rate
+                    analyzer.sampleRate = rate
+                    if self.spectrumVisible { analyzer.start() }
+                    self.startClippingMonitoring()
+                } else {
+                    OutputRateLock.shared.heldRate = nil
+                    engine.setSampleSink(nil)
+                    engine.controlQueue.async { engine.restoreOutputRate() }
+                    self.isEnabled = false
+                    self.statusMessage = error ?? self.loc("Couldn't start the EQ engine.")
+                }
+            }
+        }
+    }
+
     func toggleEnabled() { setEnabled(!isEnabled) }
+
+    func setSpectrumVisible(_ visible: Bool) {
+        guard visible != spectrumVisible else { return }
+        spectrumVisible = visible
+        guard engineRunning else { return }
+        if visible { analyzer.start() } else { analyzer.stop() }
+    }
 
     // MARK: - Profile library
 
@@ -120,7 +216,8 @@ final class EQModel: ObservableObject {
     func duplicateProfile() {
         let copy = PEQProfile(name: uniqueName(profile.name + " " + loc("copy")),
                               preampDB: profile.preampDB,
-                              bands: profile.bands)
+                              bands: profile.bands,
+                              designSampleRate: profile.designSampleRate)
         profiles.append(copy)
         profile = copy
     }
@@ -161,27 +258,45 @@ final class EQModel: ObservableObject {
             return
         }
         let name = url.deletingPathExtension().lastPathComponent
-        let result = AutoEQParser.parse(text)
+        let designRate = Self.designRate(forImportedFile: url)
+        let result = AutoEQParser.parse(text, designRate: designRate)
         guard !result.bands.isEmpty else {
             statusMessage = String(format: loc("No filters found in %1$@."), url.lastPathComponent)
             return
         }
-        let imported = PEQProfile(name: uniqueName(name),
-                                  preampDB: result.preampDB,
-                                  bands: result.bands).sanitized()
+        let raw = PEQProfile(name: uniqueName(name),
+                             preampDB: result.preampDB,
+                             bands: result.bands,
+                             designSampleRate: designRate)
+        let imported = raw.sanitized()
         profiles.append(imported)
         profile = imported
 
         let truncatedCount = max(0, result.bands.count - imported.bands.count)
-        if result.skippedLines.isEmpty, truncatedCount == 0 {
-            statusMessage = String(format: loc("Imported %1$ld bands from %2$@."),
-                                   imported.bands.count, name)
-        } else {
+        // Anything clamped changes the curve the generator fitted, so say so.
+        let limitedCount = zip(raw.bands, imported.bands).filter { $0 != $1 }.count
+            + (raw.preampDB == imported.preampDB ? 0 : 1)
+        if !result.skippedLines.isEmpty || truncatedCount > 0 {
             statusMessage = String(format: loc("Imported %1$ld bands from %2$@ (%3$ld skipped or over limit)."),
                                    imported.bands.count,
                                    name,
                                    result.skippedLines.count + truncatedCount)
+        } else if limitedCount > 0 {
+            statusMessage = String(format: loc("Imported %1$ld bands from %2$@ (%3$ld values limited to the supported range)."),
+                                   imported.bands.count, name, limitedCount)
+        } else {
+            statusMessage = String(format: loc("Imported %1$ld bands from %2$@."),
+                                   imported.bands.count, name)
         }
+    }
+
+    /// The rate a preset file was fitted at, so its response is reproduced
+    /// faithfully. PEQdB designs at 48 kHz (its preview runs a 48 kHz
+    /// AudioContext and its files match the 48 kHz response to 0.004 dB) and
+    /// names downloads "PEQdB-…"; AutoEq's published results — and anything
+    /// else — default to AutoEq's 44.1 kHz. The EQ panel can change it.
+    static func designRate(forImportedFile url: URL) -> Double {
+        url.lastPathComponent.lowercased().hasPrefix("peqdb") ? 48_000 : PEQConstraints.defaultDesignRate
     }
 
     // MARK: - Reactions / persistence
@@ -221,7 +336,7 @@ final class EQModel: ObservableObject {
     private func stopClippingMonitoring() {
         clippingTimer?.invalidate()
         clippingTimer = nil
-        clippingDetected = false
+        if clippingDetected { clippingDetected = false }
     }
 
     private func pollClippingState() {
@@ -229,8 +344,10 @@ final class EQModel: ObservableObject {
         if epoch != lastClippingEpoch {
             lastClippingEpoch = epoch
             clippingVisibleUntil = Date().addingTimeInterval(2)
-            clippingDetected = true
-        } else if Date() >= clippingVisibleUntil {
+            if !clippingDetected { clippingDetected = true }
+        } else if clippingDetected, Date() >= clippingVisibleUntil {
+            // Polled 4×/s: only write on a real change, since every write to an
+            // observed property invalidates the views that read it.
             clippingDetected = false
         }
     }
@@ -253,7 +370,8 @@ final class EQModel: ObservableObject {
         return name
     }
 
-    private func loc(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+    /// Follows the in-app language, not just the macOS one.
+    private func loc(_ key: String) -> String { L10n.string(key) }
 
     private struct EQStore: Codable {
         var profiles: [PEQProfile]
@@ -264,6 +382,8 @@ final class EQModel: ObservableObject {
         let manager = FileManager.default
         guard let base = manager.urls(for: .applicationSupportDirectory,
                                       in: .userDomainMask).first else { return nil }
+        // Still "Choritsu" — the app's former name — so profiles saved by
+        // earlier versions keep loading after the rename to SyncHz.
         let folder = base.appendingPathComponent("Choritsu", isDirectory: true)
         try? manager.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appendingPathComponent("eq-profiles.json")
@@ -286,3 +406,15 @@ final class EQModel: ObservableObject {
         try? data.write(to: url, options: .atomic)
     }
 }
+
+#if DEBUG
+extension EQModel {
+    /// Previews and screenshot rendering only: show the EQ as running at
+    /// `sampleRate` without starting the audio engine. Not in release builds.
+    func stagePreview(enabled: Bool, sampleRate: Double?) {
+        isEnabled = enabled
+        engineRunning = enabled
+        currentSampleRate = sampleRate
+    }
+}
+#endif

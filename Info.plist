@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Choritsu</string>
+    <string>SyncHz</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleName</key>
-    <string>Choritsu</string>
+    <string>SyncHz</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -19,12 +19,14 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Choritsu needs access to Apple Music to read the current track and control playback.</string>
+    <string>SyncHz needs access to Apple Music to read the current track and control playback.</string>
     <key>NSAppleMusicUsageDescription</key>
-    <string>Choritsu needs access to Apple Music playback information.</string>
+    <string>SyncHz needs access to Apple Music playback information.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>SyncHz needs audio input access to receive Apple Music's sound for the headphone EQ. It never records your microphone.</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>Choritsu taps Apple Music's audio to apply your headphone EQ before it reaches your output device.</string>
+    <string>SyncHz taps Apple Music's audio to apply your headphone EQ before it reaches your output device.</string>
     <key>NSMediaLibraryUsageDescription</key>
-    <string>Choritsu needs access to your media library to read now playing metadata.</string>
+    <string>SyncHz needs access to your media library to read now playing metadata.</string>
 </dict>
 </plist>

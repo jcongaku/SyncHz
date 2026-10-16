@@ -1,14 +1,16 @@
 import Foundation
 import AppKit
+import Observation
 
-/// Checks GitHub Releases for a newer Choritsu build.
+/// Checks GitHub Releases for a newer SyncHz build.
 ///
 /// The app is distributed outside the App Store and is not notarized, so it
 /// cannot replace itself in place — an unsigned in-place swap would land a
 /// quarantined bundle that macOS refuses to launch. This checker therefore only
 /// reports that a newer release exists and opens its page; the user still does
 /// the drag-install.
-final class UpdateChecker: ObservableObject {
+@Observable
+final class UpdateChecker {
     enum State: Equatable {
         case idle
         case checking
@@ -19,14 +21,14 @@ final class UpdateChecker: ObservableObject {
 
     static let shared = UpdateChecker()
 
-    @Published private(set) var state: State = .idle
+    private(set) var state: State = .idle
 
     /// Public, unauthenticated endpoint. `releases/latest` already excludes
     /// drafts and prereleases, so a tagged beta never reaches users here.
     private let feedURL = URL(string: "https://api.github.com/repos/jcongaku/apple-music-lossless-eq/releases/latest")!
     private let launchDelay: TimeInterval = 5
     private let session: URLSession
-    private var hasCheckedAtLaunch = false
+    @ObservationIgnored private var hasCheckedAtLaunch = false
 
     init(session: URLSession? = nil) {
         if let session {

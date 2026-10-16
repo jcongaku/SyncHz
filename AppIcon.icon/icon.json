@@ -1,27 +1,42 @@
 {
   "fill" : {
-    "solid" : "srgb:0.129,0.118,0.106,1.000"
+    "linear-gradient" : [
+      "srgb:0.17255,0.16863,0.18039,1.00000",
+      "srgb:0.08235,0.07843,0.08627,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 1
+      }
+    }
   },
   "groups" : [
     {
       "layers" : [
         {
-          "image-name" : "wave-back.png",
-          "name" : "wave-back"
+          "image-name" : "waves.png",
+          "name" : "waves"
         }
       ]
     },
     {
       "layers" : [
         {
-          "image-name" : "wave-front.png",
-          "name" : "wave-front"
+          "image-name" : "readout.png",
+          "name" : "readout"
         }
       ]
     }
   ],
   "supported-platforms" : {
-    "circles" : [ "watchOS" ],
+    "circles" : [
+      "watchOS"
+    ],
     "squares" : "shared"
   }
 }

@@ -1,13 +1,30 @@
 import Foundation
 
+/// Limits applied to band parameters. They exist to keep the math finite, not
+/// to second-guess a preset: anything a PEQ generator emits must survive an
+/// import unchanged, or the correction it fitted is silently altered.
 enum PEQConstraints {
     static let maximumBands = 32
-    static let frequencyRange = 20.0...20_000.0
-    static let gainRange = -20.0...20.0
-    static let preampRange = -24.0...12.0
-    static let peakQRange = 0.1...12.0
-    // AutoEq shelves intentionally stay below the resonant/overshooting region.
-    static let shelfQRange = 0.4...0.7
+    /// AutoEq fits 20 Hz–10 kHz; other generators go lower and higher. A band
+    /// at or above the playback Nyquist frequency is bypassed when coefficients
+    /// are made, rather than clamped here.
+    static let frequencyRange = 10.0...22_000.0
+    /// AutoEq's default is ±20 dB; leave room above it.
+    static let gainRange = -24.0...24.0
+    static let preampRange = -30.0...12.0
+    /// AutoEq's own app presets reach Q 12 (Poweramp) and its default lower
+    /// bound is 0.18; IEM notch fits go higher still.
+    static let peakQRange = 0.05...20.0
+    /// AutoEq's default shelves use Q 0.4–0.7, but its app presets and other
+    /// tools export shelf Q outside that. RBJ shelves stay well defined there —
+    /// above 0.707 they overshoot, which is exactly what such a preset asks for.
+    static let shelfQRange = 0.1...10.0
+
+    /// AutoEq's published results are fitted at 44.1 kHz (`DEFAULT_FS`); its
+    /// web app fits at the browser's rate instead, so profiles carry their own.
+    static let defaultDesignRate = 44_100.0
+    static let designRates: [Double] = [44_100, 48_000, 88_200, 96_000, 176_400, 192_000]
+    static let designRateRange = 8_000.0...768_000.0
 
     static func qRange(for type: PEQFilterType) -> ClosedRange<Double> {
         type == .peak ? peakQRange : shelfQRange
@@ -22,7 +39,7 @@ enum PEQConstraints {
 
 // MARK: - Filter vocabulary
 
-/// The parametric filter shapes Choritsu supports. The raw values mirror
+/// The parametric filter shapes SyncHz supports. The raw values mirror
 /// AutoEQ's `ParametricEQ.txt` tokens so profiles round-trip cleanly.
 enum PEQFilterType: String, Codable, CaseIterable, Identifiable {
     case peak       // AutoEQ: PK
@@ -56,10 +73,12 @@ struct PEQBand: Identifiable, Codable, Equatable {
     var id: UUID
     var isEnabled: Bool
     var type: PEQFilterType
-    /// Centre / corner frequency in Hz.
+    /// Peak centre, or shelf midpoint (the half-gain point, as in RBJ and
+    /// AutoEq — not a corner frequency), in Hz.
     var frequency: Double
     var gainDB: Double
-    /// Quality factor. AutoEQ shelves default to ~0.707.
+    /// RBJ quality factor, for shelves too (AutoEq's LSC/HSC use RBJ Q, not
+    /// shelf slope S). AutoEQ shelves default to ~0.707.
     var q: Double
 
     init(id: UUID = UUID(),
@@ -102,15 +121,37 @@ struct PEQProfile: Identifiable, Codable, Equatable {
     /// to leave headroom for the boosts and avoid clipping.
     var preampDB: Double
     var bands: [PEQBand]
+    /// The sample rate the band parameters were fitted at. The response at
+    /// this rate is the profile's definition: the graph draws it, and
+    /// `PEQRateMatcher` reproduces it at whatever rate the device plays.
+    var designSampleRate: Double
 
     init(id: UUID = UUID(),
          name: String,
          preampDB: Double = 0,
-         bands: [PEQBand] = []) {
+         bands: [PEQBand] = [],
+         designSampleRate: Double = PEQConstraints.defaultDesignRate) {
         self.id = id
         self.name = name
         self.preampDB = preampDB
         self.bands = bands
+        self.designSampleRate = designSampleRate
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, preampDB, bands, designSampleRate
+    }
+
+    /// Profiles saved before `designSampleRate` existed decode with the
+    /// AutoEq default, so existing libraries keep loading.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        preampDB = try container.decode(Double.self, forKey: .preampDB)
+        bands = try container.decode([PEQBand].self, forKey: .bands)
+        designSampleRate = try container.decodeIfPresent(Double.self, forKey: .designSampleRate)
+            ?? PEQConstraints.defaultDesignRate
     }
 
     static let flat = PEQProfile(name: "Flat")
@@ -121,6 +162,9 @@ struct PEQProfile: Identifiable, Codable, Equatable {
                                                to: PEQConstraints.preampRange,
                                                fallback: 0)
         result.bands = bands.prefix(PEQConstraints.maximumBands).map { $0.sanitized() }
+        result.designSampleRate = PEQConstraints.clamp(designSampleRate,
+                                                       to: PEQConstraints.designRateRange,
+                                                       fallback: PEQConstraints.defaultDesignRate)
         return result
     }
 }

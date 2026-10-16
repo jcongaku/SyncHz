@@ -1,0 +1,3 @@
+/* English is the development language: keys are the English text, so this
+   table only needs entries where the display text differs from the key.
+   Its presence makes "en" a real localization for the in-app language picker. */

@@ -33,3 +33,87 @@
 "No filters found in %1$@." = "%1$@ にフィルタが見つかりません。";
 "Couldn't read %1$@." = "%1$@ を読み込めませんでした。";
 "copy" = "コピー";
+
+/* Menu-bar panel — Japanese */
+"Signal" = "シグナル";
+"Source" = "音源";
+"Output" = "出力";
+"In sync" = "同期中";
+"Switching" = "切替中";
+"Mismatch" = "不一致";
+"Detecting" = "検出中";
+"Standby" = "待機";
+"Auto switch" = "自動切替";
+"Log parser" = "ログ解析";
+"Refresh now" = "今すぐ更新";
+"Restart log parser" = "ログ解析を再起動";
+"Dump recent logs" = "最近のログを出力";
+"Dump now playing" = "再生中の情報を出力";
+"Quit" = "終了";
+"More" = "その他";
+"Headphone EQ" = "ヘッドホン EQ";
+"Parametric EQ" = "パラメトリック EQ";
+"Update available — %@" = "アップデートがあります — %@";
+"Checking for updates…" = "アップデートを確認中…";
+"SyncHz is up to date" = "SyncHz は最新です";
+"Update check failed: %@" = "アップデートの確認に失敗しました：%@";
+"Check for Updates…" = "アップデートを確認…";
+"EQ is on — playback is no longer bit-perfect" = "EQ オン — 再生はビットパーフェクトではありません";
+"Output sample rate" = "出力サンプルレート";
+"Output device" = "出力デバイス";
+"Previous track" = "前のトラック";
+"Next track" = "次のトラック";
+"Play" = "再生";
+"Pause" = "一時停止";
+"Fixed" = "固定";
+"Volume" = "音量";
+"%lld percent" = "%lld%%";
+
+/* Status, format and language strings — Japanese */
+"Language" = "言語";
+"Follow System" = "システムに従う";
+"Not playing" = "再生していません";
+"Unavailable" = "利用できません";
+"Unknown" = "不明";
+"Log (locked)" = "ログ（確定）";
+"Log (estimating)" = "ログ（推定中）";
+"%lld-bit" = "%lldビット";
+"Lossless" = "ロスレス";
+"Hi-Res Lossless" = "ハイレゾロスレス";
+"High Quality" = "高音質";
+"Log parser disabled" = "ログ解析はオフです";
+"Media & Apple Music access denied in Privacy & Security." = "メディアと Apple Music へのアクセスが「プライバシーとセキュリティ」で拒否されています。";
+"Switched output device" = "出力デバイスを切り替えました";
+"Failed to switch output device" = "出力デバイスを切り替えられませんでした";
+"Output set to %@" = "出力を %@ に設定しました";
+"Failed to set output sample rate" = "出力サンプルレートを設定できませんでした";
+"Paused" = "一時停止中";
+"Auto switch disabled" = "自動切替はオフです";
+"Waiting for log sample rate" = "ログからサンプルレートを待っています";
+"Output already at %@" = "出力はすでに %@ です";
+"Switched output to %@" = "出力を %@ に切り替えました";
+"Failed to switch output sample rate" = "出力サンプルレートを切り替えられませんでした";
+"Log estimating %@ (%ld/%ld)" = "ログ推定中：%@（%ld/%ld）";
+"Track changed" = "トラックが変わりました";
+"Log locked at %@" = "ログで %@ に確定";
+"Log switched at %@" = "ログで %@ に切替";
+"Log stream started" = "ログストリームを開始しました";
+
+/* EQ design rate */
+"Fitted at" = "設計サンプルレート";
+"Fitted at %@" = "%@ で設計";
+"Playback sample rate" = "再生サンプルレート";
+"The sample rate this preset was fitted at — 44.1 kHz for AutoEq's published presets. SyncHz reproduces this response at every playback rate." = "このプリセットが設計されたサンプルレート（AutoEq の公開プリセットは 44.1 kHz）。SyncHz はどの再生サンプルレートでもこの特性を再現します。";
+"Imported %1$ld bands from %2$@ (%3$ld values limited to the supported range)." = "%2$@ から %1$ld バンドを読み込みました（%3$ld 個の値を対応範囲に制限）。";
+
+/* EQ audio-input permission */
+"SyncHz needs audio input access to run the EQ. Allow it in System Settings → Privacy & Security → Microphone." = "EQ を使うには音声入力へのアクセスが必要です。「システム設定 → プライバシーとセキュリティ → マイク」で SyncHz を許可してください。";
+"No audio from Apple Music is reaching the EQ." = "Apple Music の音声が EQ に届いていません。";
+
+/* Fixed EQ processing rate */
+"Resampled" = "リサンプリング";
+"EQ on — output held at %@" = "EQ オン — 出力を %@ に固定";
+"Turn the EQ off to change the sample rate." = "サンプルレートを変更するには EQ をオフにしてください。";
+"Processing rate" = "処理サンプルレート";
+"Follow track rate" = "曲のサンプルレートに追従";
+"Hold at %@" = "%@ に固定";

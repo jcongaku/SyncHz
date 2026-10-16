@@ -4,5 +4,11 @@
 <dict>
     <key>com.apple.security.automation.apple-events</key>
     <true/>
+    <!-- The EQ reads Apple Music's process tap through an aggregate device's
+         input. macOS treats that as audio input, and under the hardened
+         runtime it is denied outright (no prompt) without this entitlement:
+         the tap then delivers silence while Music stays muted. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
 </dict>
 </plist>

@@ -14,10 +14,12 @@
 		A10000000000000000000005 /* MediaRemoteController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* MediaRemoteController.swift */; };
 		A10000000000000000000006 /* MediaAuthorizationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* MediaAuthorizationController.swift */; };
 		A10000000000000000000007 /* LogStreamController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* LogStreamController.swift */; };
-		A10000000000000000000008 /* GlassPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* GlassPanelView.swift */; };
+		A10000000000000000000008 /* PanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* PanelView.swift */; };
 		A10000000000000000000009 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* AppIcon.icon */; };
 		A10000000000000000000010 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000001 /* InfoPlist.strings */; };
 		A10000000000000000000011 /* PEQModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* PEQModels.swift */; };
+		A10000000000000000000023 /* PEQRateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* PEQRateMatcher.swift */; };
+		B10000000000000000000009 /* PEQRateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* PEQRateMatcher.swift */; };
 		A10000000000000000000012 /* Biquad.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* Biquad.swift */; };
 		A10000000000000000000013 /* AutoEQParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* AutoEQParser.swift */; };
 		A10000000000000000000014 /* BiquadProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* BiquadProcessor.swift */; };
@@ -32,8 +34,12 @@
 		B10000000000000000000004 /* BiquadProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* BiquadProcessor.swift */; };
 		B10000000000000000000005 /* LogStreamControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* LogStreamControllerTests.swift */; };
 		B10000000000000000000006 /* LogStreamController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* LogStreamController.swift */; };
+		A10000000000000000000022 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* Localization.swift */; };
+		A10000000000000000000021 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Theme.swift */; };
 		A10000000000000000000020 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* UpdateChecker.swift */; };
 		B10000000000000000000007 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* UpdateChecker.swift */; };
+		B10000000000000000000010 /* AutoEQParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* AutoEQParser.swift */; };
+		B10000000000000000000011 /* PEQCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* PEQCompatibilityTests.swift */; };
 		B10000000000000000000008 /* UpdateCheckerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* UpdateCheckerTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -49,12 +55,16 @@
 		A20000000000000000000008 /* MediaRemoteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaRemoteController.swift; sourceTree = "<group>"; };
 		A20000000000000000000009 /* MediaAuthorizationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaAuthorizationController.swift; sourceTree = "<group>"; };
 		A20000000000000000000010 /* LogStreamController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStreamController.swift; sourceTree = "<group>"; };
-		A20000000000000000000011 /* GlassPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanelView.swift; sourceTree = "<group>"; };
+		A20000000000000000000030 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		A20000000000000000000029 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = "en.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		A20000000000000000000028 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
 		A20000000000000000000012 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A20000000000000000000013 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A20000000000000000000014 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A20000000000000000000015 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = "ja.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A20000000000000000000016 /* PEQModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PEQModels.swift; sourceTree = "<group>"; };
+		A20000000000000000000031 /* PEQRateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PEQRateMatcher.swift; sourceTree = "<group>"; };
 		A20000000000000000000017 /* Biquad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Biquad.swift; sourceTree = "<group>"; };
 		A20000000000000000000018 /* AutoEQParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoEQParser.swift; sourceTree = "<group>"; };
 		A20000000000000000000019 /* BiquadProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiquadProcessor.swift; sourceTree = "<group>"; };
@@ -68,6 +78,7 @@
 		B20000000000000000000001 /* PEQDspRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PEQDspRegressionTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* ChoritsuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ChoritsuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000003 /* LogStreamControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogStreamControllerTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000005 /* PEQCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PEQCompatibilityTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000004 /* UpdateCheckerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -121,6 +132,7 @@
 			children = (
 				A20000000000000000000001 /* SampleRateSwitcherApp.swift */,
 				A20000000000000000000027 /* UpdateChecker.swift */,
+				A20000000000000000000030 /* Localization.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -128,7 +140,8 @@
 		A40000000000000000000011 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000011 /* GlassPanelView.swift */,
+				A20000000000000000000011 /* PanelView.swift */,
+				A20000000000000000000028 /* Theme.swift */,
 				A20000000000000000000022 /* EQView.swift */,
 			);
 			path = Views;
@@ -157,6 +170,7 @@
 			children = (
 				A20000000000000000000016 /* PEQModels.swift */,
 				A20000000000000000000017 /* Biquad.swift */,
+				A20000000000000000000031 /* PEQRateMatcher.swift */,
 				A20000000000000000000019 /* BiquadProcessor.swift */,
 				A20000000000000000000018 /* AutoEQParser.swift */,
 				A20000000000000000000023 /* SpectrumAnalyzer.swift */,
@@ -181,6 +195,7 @@
 				B20000000000000000000001 /* PEQDspRegressionTests.swift */,
 				B20000000000000000000003 /* LogStreamControllerTests.swift */,
 				B20000000000000000000004 /* UpdateCheckerTests.swift */,
+				B20000000000000000000005 /* PEQCompatibilityTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -288,15 +303,18 @@
 			files = (
 				A10000000000000000000001 /* SampleRateSwitcherApp.swift in Sources */,
 				A10000000000000000000020 /* UpdateChecker.swift in Sources */,
+				A10000000000000000000022 /* Localization.swift in Sources */,
 				A10000000000000000000002 /* SampleRateModel.swift in Sources */,
 				A10000000000000000000003 /* MusicController.swift in Sources */,
 				A10000000000000000000004 /* AudioDeviceController.swift in Sources */,
 				A10000000000000000000005 /* MediaRemoteController.swift in Sources */,
 				A10000000000000000000006 /* MediaAuthorizationController.swift in Sources */,
 				A10000000000000000000007 /* LogStreamController.swift in Sources */,
-				A10000000000000000000008 /* GlassPanelView.swift in Sources */,
+				A10000000000000000000008 /* PanelView.swift in Sources */,
+				A10000000000000000000021 /* Theme.swift in Sources */,
 				A10000000000000000000011 /* PEQModels.swift in Sources */,
 				A10000000000000000000012 /* Biquad.swift in Sources */,
+				A10000000000000000000023 /* PEQRateMatcher.swift in Sources */,
 				A10000000000000000000013 /* AutoEQParser.swift in Sources */,
 				A10000000000000000000014 /* BiquadProcessor.swift in Sources */,
 				A10000000000000000000015 /* ProcessTapEngine.swift in Sources */,
@@ -313,11 +331,14 @@
 				B10000000000000000000001 /* PEQDspRegressionTests.swift in Sources */,
 				B10000000000000000000002 /* PEQModels.swift in Sources */,
 				B10000000000000000000003 /* Biquad.swift in Sources */,
+				B10000000000000000000009 /* PEQRateMatcher.swift in Sources */,
 				B10000000000000000000004 /* BiquadProcessor.swift in Sources */,
 				B10000000000000000000005 /* LogStreamControllerTests.swift in Sources */,
 				B10000000000000000000006 /* LogStreamController.swift in Sources */,
 				B10000000000000000000007 /* UpdateChecker.swift in Sources */,
 				B10000000000000000000008 /* UpdateCheckerTests.swift in Sources */,
+				B10000000000000000000010 /* AutoEQParser.swift in Sources */,
+				B10000000000000000000011 /* PEQCompatibilityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,6 +361,7 @@
 				A20000000000000000000024 /* zh-Hans */,
 				A20000000000000000000025 /* zh-Hant */,
 				A20000000000000000000026 /* ja */,
+				A20000000000000000000029 /* en */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -366,10 +388,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.garykong.choritsu;
-				PRODUCT_NAME = Choritsu;
+				PRODUCT_NAME = SyncHz;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -393,10 +415,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.garykong.choritsu;
-				PRODUCT_NAME = Choritsu;
+				PRODUCT_NAME = SyncHz;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -427,7 +449,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.garykong.choritsu.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -440,7 +462,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.garykong.choritsu.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;

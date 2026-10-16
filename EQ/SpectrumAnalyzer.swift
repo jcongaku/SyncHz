@@ -1,53 +1,60 @@
 import Foundation
 import Accelerate
 import Synchronization
+import Observation
 
-/// Real-time spectrum analyzer for the EQ window. The audio engine pushes
-/// post-EQ output samples in via `append` (audio thread, lock-free ring write);
-/// a 24 fps timer on the main run loop runs a windowed FFT and publishes
-/// log-spaced magnitudes, smoothed across neighbouring bins and over time so
-/// the curve reads as a soft envelope rather than spiky bars. Because it
-/// analyses the processed output, the displayed spectrum reflects EQ live.
-final class SpectrumAnalyzer: ObservableObject, @unchecked Sendable {
-    /// Normalised magnitudes (0…1), one per display bin, log-spaced 20 Hz–20 kHz.
-    @Published private(set) var levels: [Float]
+/// Real-time spectrum analyzer for the EQ window, drawn as bars behind the
+/// response curve. The audio engine pushes post-EQ output samples in via
+/// `append` (audio thread, lock-free ring write); a 24 fps timer on the main
+/// run loop runs a windowed FFT and folds it into 1/3-octave bands. Because it
+/// analyses the processed output, the bars reflect the EQ live.
+///
+/// Each band sums the power of every FFT bin inside it — like a hardware RTA —
+/// rather than sampling one bin per band, so no energy between sample points
+/// is lost at the top end. The FFT length grows with the sample rate (2048 at
+/// 44.1/48 kHz up to 8192 at 176.4/192 kHz) to keep ~23 Hz resolution, so the
+/// lowest bands stay distinct at hi-res rates.
+@Observable
+final class SpectrumAnalyzer: @unchecked Sendable {
+    /// Normalised band levels (0…1), one per band, log-spaced 20 Hz–20 kHz.
+    /// The only observed property: `SpectrumView` is the one view that reads it.
+    private(set) var levels: [Float]
 
     /// Updated by the engine when the device sample rate changes (for bin→freq).
-    var sampleRate: Double = 48_000
+    @ObservationIgnored var sampleRate: Double = 48_000
 
-    let binCount = 64
-    private let fftSize = 2048
-    private let halfSize = 1024
+    /// 32 bands across 20 Hz–20 kHz: ~1/3 octave each.
+    let bandCount = 32
+    private static let maxLog2n: vDSP_Length = 13            // 8192-point FFT
+    private static let maxFFTSize = 1 << 13
     private static let ringSize = 65_536 // power of two; prevents reader overrun
 
-    private let log2n: vDSP_Length
     private let fftSetup: FFTSetup
-    private var hann: [Float]
-    private var windowed: [Float]
-    private var realp: [Float]
-    private var imagp: [Float]
-    private var magnitudes: [Float]
-    private var raw: [Float]
-    private var smoothed: [Float]
+    // DSP scratch is ignored: observed arrays would be copied on every
+    // inout pass to vDSP, 24 times a second.
+    @ObservationIgnored private var fftSize = 0
+    @ObservationIgnored private var window: [Float]
+    @ObservationIgnored private var windowed: [Float]
+    @ObservationIgnored private var realp: [Float]
+    @ObservationIgnored private var imagp: [Float]
+    @ObservationIgnored private var power: [Float]
+    @ObservationIgnored private var smoothed: [Float]
 
     private let ring: UnsafeMutablePointer<Float>
     private let writeIndex = Atomic<Int>(0)
-    private var timer: Timer?
+    @ObservationIgnored private var timer: Timer?
 
     init() {
-        log2n = vDSP_Length(log2(Double(fftSize)))
-        fftSetup = vDSP_create_fftsetup(log2n, FFTRadix(kFFTRadix2))!
-        hann = [Float](repeating: 0, count: fftSize)
-        vDSP_hann_window(&hann, vDSP_Length(fftSize), Int32(vDSP_HANN_NORM))
-        windowed = [Float](repeating: 0, count: fftSize)
-        realp = [Float](repeating: 0, count: halfSize)
-        imagp = [Float](repeating: 0, count: halfSize)
-        magnitudes = [Float](repeating: 0, count: halfSize)
-        raw = [Float](repeating: 0, count: binCount)
-        smoothed = [Float](repeating: 0, count: binCount)
+        fftSetup = vDSP_create_fftsetup(Self.maxLog2n, FFTRadix(kFFTRadix2))!
+        window = []
+        windowed = [Float](repeating: 0, count: Self.maxFFTSize)
+        realp = [Float](repeating: 0, count: Self.maxFFTSize / 2)
+        imagp = [Float](repeating: 0, count: Self.maxFFTSize / 2)
+        power = [Float](repeating: 0, count: Self.maxFFTSize / 2)
+        smoothed = [Float](repeating: 0, count: bandCount)
         ring = .allocate(capacity: Self.ringSize)
         ring.initialize(repeating: 0, count: Self.ringSize)
-        levels = [Float](repeating: 0, count: binCount)
+        levels = [Float](repeating: 0, count: bandCount)
     }
 
     deinit {
@@ -80,49 +87,72 @@ final class SpectrumAnalyzer: ObservableObject, @unchecked Sendable {
     func stop() {
         timer?.invalidate()
         timer = nil
-        smoothed = [Float](repeating: 0, count: binCount)
-        levels = [Float](repeating: 0, count: binCount)
+        smoothed = [Float](repeating: 0, count: bandCount)
+        levels = [Float](repeating: 0, count: bandCount)
+    }
+
+    /// ~23 Hz bins at any rate: 2048 points at 44.1/48 kHz, 8192 at 192 kHz.
+    private func configureFFT() {
+        let wanted = sampleRate > 96_000 ? 8_192 : (sampleRate > 48_000 ? 4_096 : 2_048)
+        guard wanted != fftSize else { return }
+        fftSize = wanted
+        window = [Float](repeating: 0, count: wanted)
+        vDSP_hann_window(&window, vDSP_Length(wanted), Int32(vDSP_HANN_NORM))
     }
 
     private func tick() {
+        configureFFT()
+        let n = fftSize
+        let half = n / 2
+        let log2n = vDSP_Length(n.trailingZeroBitCount)
+
         let end = writeIndex.load(ordering: .acquiring)
         let mask = Self.ringSize - 1
-        for i in 0..<fftSize {
-            windowed[i] = ring[(end - fftSize + i) & mask]
+        for i in 0..<n {
+            windowed[i] = ring[(end - n + i) & mask]
         }
-        vDSP_vmul(windowed, 1, hann, 1, &windowed, 1, vDSP_Length(fftSize))
+        vDSP_vmul(windowed, 1, window, 1, &windowed, 1, vDSP_Length(n))
 
         realp.withUnsafeMutableBufferPointer { rp in
             imagp.withUnsafeMutableBufferPointer { ip in
                 var split = DSPSplitComplex(realp: rp.baseAddress!, imagp: ip.baseAddress!)
                 windowed.withUnsafeBufferPointer { wp in
-                    wp.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfSize) { cp in
-                        vDSP_ctoz(cp, 2, &split, 1, vDSP_Length(halfSize))
+                    wp.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: half) { cp in
+                        vDSP_ctoz(cp, 2, &split, 1, vDSP_Length(half))
                     }
                 }
                 vDSP_fft_zrip(fftSetup, &split, 1, log2n, FFTDirection(FFT_FORWARD))
-                vDSP_zvabs(&split, 1, &magnitudes, 1, vDSP_Length(halfSize))
+                vDSP_zvmags(&split, 1, &power, 1, vDSP_Length(half))     // |X|²
             }
         }
 
-        let nyquist = sampleRate / 2
-        let scale = 2.0 / Float(fftSize)
-        for i in 0..<binCount {
-            let t = Double(i) / Double(binCount - 1)
-            let freq = 20.0 * pow(1000.0, t)                 // 20 Hz … 20 kHz
-            var bin = Int((freq / nyquist) * Double(halfSize))
-            bin = min(max(bin, 1), halfSize - 1)
-            let db = 20.0 * log10(magnitudes[bin] * scale + 1e-7)
-            raw[i] = Float(min(max((db + 80.0) / 80.0, 0), 1))   // −80…0 dB → 0…1
-        }
-        // Round off sharp peaks: blend each bin with its neighbours (a [1,2,1]
-        // kernel), then ease toward it with a gentle attack and slow release so
-        // the spectrum reads as a soft envelope rather than spiky bars.
-        for i in 0..<binCount {
-            let lo = max(0, i - 1), hi = min(binCount - 1, i + 1)
-            let blended = (raw[lo] + 2 * raw[i] + raw[hi]) / 4
-            let coeff: Float = blended > smoothed[i] ? 0.45 : 0.15
-            smoothed[i] = smoothed[i] * (1 - coeff) + blended * coeff
+        // Fold bins into bands. A band narrower than one bin (the lowest ones)
+        // takes the bin under its centre.
+        let binHz = sampleRate / Double(n)
+        let amplitudeScale = 2.0 / Double(n)
+        for band in 0..<bandCount {
+            let low = 20.0 * pow(1_000.0, Double(band) / Double(bandCount))
+            let high = 20.0 * pow(1_000.0, Double(band + 1) / Double(bandCount))
+            var first = Int((low / binHz).rounded(.up))
+            var last = Int((high / binHz).rounded(.down))
+            if last < first {
+                first = Int((sqrt(low * high) / binHz).rounded())
+                last = first
+            }
+            first = min(max(first, 1), half - 1)
+            last = min(max(last, first), half - 1)
+            var sum: Float = 0
+            power.withUnsafeBufferPointer { p in
+                vDSP_sve(p.baseAddress! + first, 1, &sum, vDSP_Length(last - first + 1))
+            }
+            let amplitude = Double(sum).squareRoot() * amplitudeScale
+            let db = 20 * log10(amplitude + 1e-7)
+            let level = Float(min(max((db + 80) / 80, 0), 1))       // −80…0 dB → 0…1
+
+            // Ballistics: quick attack, slower release, so bars read as music
+            // rather than flicker.
+            let coefficient: Float = level > smoothed[band] ? 0.6 : 0.18
+            smoothed[band] += (level - smoothed[band]) * coefficient
         }
         levels = smoothed
     }

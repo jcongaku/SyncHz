@@ -33,3 +33,90 @@
 "No filters found in %1$@." = "%1$@ 中未找到滤波器。";
 "Couldn't read %1$@." = "无法读取 %1$@。";
 "copy" = "副本";
+
+/* Menu-bar panel — Simplified Chinese */
+"Signal" = "信号";
+"Source" = "音源";
+"Output" = "输出";
+"In sync" = "已同步";
+"Switching" = "切换中";
+"Mismatch" = "未匹配";
+"Detecting" = "检测中";
+"Standby" = "待机";
+"Auto switch" = "自动切换";
+"Log parser" = "日志解析";
+"Refresh now" = "立即刷新";
+"Restart log parser" = "重启日志解析";
+"Dump recent logs" = "导出最近日志";
+"Dump now playing" = "导出正在播放信息";
+"Quit" = "退出";
+"More" = "更多";
+"Headphone EQ" = "耳机均衡器";
+"Parametric EQ" = "参数均衡器";
+"Update available — %@" = "有可用更新 — %@";
+"Checking for updates…" = "正在检查更新…";
+"SyncHz is up to date" = "SyncHz 已是最新版本";
+"Update check failed: %@" = "检查更新失败：%@";
+"Check for Updates…" = "检查更新…";
+"EQ is on — playback is no longer bit-perfect" = "均衡器已开启 — 播放不再是 bit-perfect";
+"Output sample rate" = "输出采样率";
+"Output device" = "输出设备";
+"Previous track" = "上一首";
+"Next track" = "下一首";
+"Play" = "播放";
+"Pause" = "暂停";
+"Fixed" = "固定";
+"Volume" = "音量";
+"%lld percent" = "%lld%%";
+
+/* Status, format and language strings — Simplified Chinese */
+"Language" = "语言";
+"Follow System" = "跟随系统";
+"Not playing" = "未在播放";
+"Unavailable" = "不可用";
+"Unknown" = "未知";
+"Log (locked)" = "日志（已锁定）";
+"Log (estimating)" = "日志（估算中）";
+"%lld-bit" = "%lld 位";
+"Lossless" = "无损";
+"Hi-Res Lossless" = "高解析度无损";
+"High Quality" = "高品质";
+"Log parser disabled" = "日志解析已关闭";
+"Media & Apple Music access denied in Privacy & Security." = "媒体与 Apple Music 访问权限已在“隐私与安全性”中被拒绝。";
+"Switched output device" = "已切换输出设备";
+"Failed to switch output device" = "切换输出设备失败";
+"Output set to %@" = "输出已设为 %@";
+"Failed to set output sample rate" = "设置输出采样率失败";
+"Paused" = "已暂停";
+"Auto switch disabled" = "自动切换已关闭";
+"Waiting for log sample rate" = "正在等待日志中的采样率";
+"Output already at %@" = "输出已是 %@";
+"Switched output to %@" = "已将输出切换到 %@";
+"Failed to switch output sample rate" = "切换输出采样率失败";
+"Log estimating %@ (%ld/%ld)" = "日志估算中：%@（%ld/%ld）";
+"Track changed" = "已切换曲目";
+"Log locked at %@" = "日志已锁定 %@";
+"Log switched at %@" = "日志已切换到 %@";
+"Log stream started" = "日志流已启动";
+
+/* EQ design rate */
+"Fitted at" = "拟合采样率";
+"Fitted at %@" = "拟合于 %@";
+"Playback sample rate" = "播放采样率";
+"The sample rate this preset was fitted at — 44.1 kHz for AutoEq's published presets. SyncHz reproduces this response at every playback rate." = "该预设拟合时使用的采样率——AutoEq 公开的预设为 44.1 kHz。SyncHz 会在任何播放采样率下还原这一响应。";
+"Imported %1$ld bands from %2$@ (%3$ld values limited to the supported range)." = "已从 %2$@ 导入 %1$ld 个频段（%3$ld 个数值被限制在支持范围内）。";
+
+/* EQ audio-input permission */
+"SyncHz needs audio input access to run the EQ. Allow it in System Settings → Privacy & Security → Microphone." = "SyncHz 需要音频输入权限才能运行均衡器。请在“系统设置 → 隐私与安全性 → 麦克风”中允许。";
+"No audio from Apple Music is reaching the EQ." = "没有来自 Apple Music 的音频进入均衡器。";
+
+/* Fixed EQ processing rate */
+"Resampled" = "重采样";
+"EQ on — output held at %@" = "均衡器已开启 — 输出固定在 %@";
+"Turn the EQ off to change the sample rate." = "关闭均衡器后才能更改采样率。";
+"Processing rate" = "处理采样率";
+"Follow track rate" = "跟随曲目采样率";
+"Hold at %@" = "固定在 %@";
+
+/* Header tag: the app's Chinese name */
+"調律" = "同频";

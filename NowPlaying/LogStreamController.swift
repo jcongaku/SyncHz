@@ -18,6 +18,7 @@ final class LogStreamController {
     private var launchedAt: Date?
 
     var onSampleRate: ((Double, String?) -> Void)?
+    var onTrackFormat: ((TrackFormat) -> Void)?
     var onStatus: ((String) -> Void)?
 
     /// Deliberately narrow. Matching `CONTAINS[c] "audio"` and
@@ -228,6 +229,12 @@ final class LogStreamController {
 
     @discardableResult
     private func processMessage(_ message: String) -> Bool {
+        // Not a rate vote: the same line also carries `sampleRate:`, which
+        // falls through to the rate parsers below.
+        if let format = TrackFormat(logMessage: message) {
+            onTrackFormat?(format)
+        }
+
         if let rate = SampleRateParser.extractSampleRate(from: message) {
             onSampleRate?(rate, message)
             return true
@@ -298,6 +305,59 @@ final class LogStreamController {
                 print(line)
             }
         }
+    }
+}
+
+/// What Music says it is streaming, from its `activeFormat` log line:
+///
+///     activeFormat: tier: Lossless; groupID: audio-alac-stereo-48000-24; bitDepth: 24-bit; sampleRate: 48kh
+struct TrackFormat: Equatable {
+    var codec: String?
+    var bitDepth: Int?
+    var tier: String?
+
+    init?(logMessage message: String) {
+        guard let marker = message.range(of: "activeFormat:", options: .caseInsensitive) else {
+            return nil
+        }
+
+        var fields: [String: String] = [:]
+        for part in message[marker.upperBound...].split(separator: ";") {
+            let pair = part.split(separator: ":", maxSplits: 1)
+            guard pair.count == 2 else { continue }
+            let key = pair[0].trimmingCharacters(in: .whitespaces).lowercased()
+            fields[key] = pair[1].trimmingCharacters(in: .whitespaces)
+        }
+
+        codec = fields["groupid"].flatMap(Self.codec(fromGroupID:))
+        bitDepth = fields["bitdepth"].flatMap { Int($0.prefix(while: \.isNumber)) }
+        tier = fields["tier"].flatMap(Self.tierName)
+        if tier == codec { tier = nil }   // "Dolby Atmos" can arrive as both
+
+        guard codec != nil || bitDepth != nil || tier != nil else { return nil }
+    }
+
+    /// `audio-alac-stereo-48000-24` → "ALAC". Unknown group IDs give nil
+    /// rather than a guess.
+    private static func codec(fromGroupID groupID: String) -> String? {
+        let names = ["alac": "ALAC", "flac": "FLAC", "aac": "AAC", "atmos": "Dolby Atmos",
+                     "ec3": "Dolby Atmos", "ac3": "AC-3"]
+        return groupID.lowercased()
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .lazy
+            .compactMap { names[String($0)] }
+            .first
+    }
+
+    /// Normalises Music's tier spellings to the names Apple Music shows.
+    private static func tierName(_ raw: String) -> String? {
+        let flat = raw.lowercased().filter { $0.isLetter }
+        guard !flat.isEmpty else { return nil }
+        if flat.contains("hires") { return "Hi-Res Lossless" }
+        if flat.contains("lossless") { return "Lossless" }
+        if flat.contains("atmos") || flat.contains("spatial") { return "Dolby Atmos" }
+        if flat.contains("highquality") { return "High Quality" }
+        return raw
     }
 }
 

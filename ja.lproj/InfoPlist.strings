@@ -1,5 +1,7 @@
-CFBundleDisplayName = "調律";
-CFBundleName = "調律";
-NSAppleEventsUsageDescription = "調律は、現在のトラックの読み取りと再生操作のために Apple Music へのアクセスを必要とします。";
-NSAppleMusicUsageDescription = "調律は、Apple Music の再生情報へのアクセスを必要とします。";
-NSMediaLibraryUsageDescription = "調律は、再生中のメタデータを読み取るためにメディアライブラリへのアクセスを必要とします。";
+CFBundleDisplayName = "SyncHz";
+CFBundleName = "SyncHz";
+NSAppleEventsUsageDescription = "SyncHz は、現在のトラックの読み取りと再生操作のために Apple Music へのアクセスを必要とします。";
+NSAppleMusicUsageDescription = "SyncHz は、Apple Music の再生情報へのアクセスを必要とします。";
+NSMediaLibraryUsageDescription = "SyncHz は、再生中のメタデータを読み取るためにメディアライブラリへのアクセスを必要とします。";
+NSAudioCaptureUsageDescription = "SyncHz は、出力デバイスに届く前にヘッドホン EQ を適用するため、Apple Music の音声をタップします。";
+NSMicrophoneUsageDescription = "SyncHz はヘッドホン EQ を適用するため、音声入力を通じて Apple Music の音を受け取ります。マイクを録音することはありません。";

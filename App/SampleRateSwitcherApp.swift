@@ -69,13 +69,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SampleRateSwitcherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var model = SampleRateModel()
-    @StateObject private var eq = EQModel()
-    @StateObject private var updates = UpdateChecker.shared
+    @State private var model = SampleRateModel()
+    @State private var eq = EQModel()
+    private let updates = UpdateChecker.shared
 
     var body: some Scene {
         MenuBarExtra {
-            GlassPanelView(model: model, eq: eq, updates: updates)
+            PanelView(model: model, eq: eq, updates: updates)
         } label: {
             HStack(spacing: 4) {
                 Image(nsImage: MenuBarMark.image)

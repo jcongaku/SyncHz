@@ -1,36 +1,43 @@
 import Foundation
 import AppKit
 import CoreAudio
+import Observation
 
-final class SampleRateModel: ObservableObject {
-    @Published var currentTrackTitle: String = "Not playing"
-    @Published var artistName: String = ""
-    @Published var albumName: String = ""
-    @Published var artwork: NSImage?
-    @Published var isPlaying: Bool = false
-    @Published var elapsedSeconds: Double?
-    @Published var durationSeconds: Double?
-    @Published var trackSampleRateDisplay: String = "Unknown"
-    @Published var outputDeviceName: String = "Unknown"
-    @Published var outputDeviceIcon: String = "speaker.wave.2.fill"
-    @Published var outputSampleRateDisplay: String = "Unknown"
-    @Published var outputSampleRate: Double?
-    @Published var outputDevices: [AudioOutputDevice] = []
-    @Published var currentOutputDeviceID: AudioDeviceID?
-    @Published var availableSampleRates: [Double] = []
-    @Published var outputVolume: Double = 0.5
-    @Published var volumeAvailable: Bool = false
-    @Published var sampleRateSourceDisplay: String = "Unknown"
-    @Published var logStatusMessage: String = ""
-    @Published var statusMessage: String = ""
-    @Published var autoSwitchEnabled: Bool = true
-    @Published var logParserEnabled: Bool = true {
+/// `@Observable`, so each panel card re-renders only for the properties it
+/// reads. The 1 Hz poll writes through `assign`, which skips unchanged values —
+/// every write to an observed property would otherwise invalidate its readers.
+@Observable
+final class SampleRateModel {
+    var currentTrackTitle: String = "Not playing"
+    var artistName: String = ""
+    var albumName: String = ""
+    var artwork: NSImage?
+    var isPlaying: Bool = false
+    var elapsedSeconds: Double?
+    var durationSeconds: Double?
+    var trackSampleRateDisplay: String = "Unknown"
+    var outputDeviceName: String = "Unknown"
+    var outputDeviceIcon: String = "speaker.wave.2.fill"
+    var outputSampleRateDisplay: String = "Unknown"
+    var outputSampleRate: Double?
+    var outputDevices: [AudioOutputDevice] = []
+    var currentOutputDeviceID: AudioDeviceID?
+    var availableSampleRates: [Double] = []
+    var outputVolume: Double = 0.5
+    var volumeAvailable: Bool = false
+    var sampleRateSourceDisplay: String = "Unknown"
+    /// Codec, bit depth and tier from Music's `activeFormat` log line, when seen.
+    var trackFormat: TrackFormat?
+    var logStatusMessage: String = ""
+    var statusMessage: String = ""
+    var autoSwitchEnabled: Bool = true
+    var logParserEnabled: Bool = true {
         didSet {
             if logParserEnabled {
                 startLogParser()
             } else {
                 logController.stop()
-                logStatusMessage = "Log parser disabled"
+                logStatusMessage = L10n.string("Log parser disabled")
             }
         }
     }
@@ -39,15 +46,15 @@ final class SampleRateModel: ObservableObject {
     private let musicController = MusicController()
     private let logController = LogStreamController()
     private let audioController = AudioDeviceController()
-    private var timer: Timer?
-    private var latestLogCandidateRate: Double?
-    private var stableLogSampleRate: Double?
-    private var latestTrackInfo: TrackInfo?
-    private var latestTrackInfoError: String?
-    private var trackInfoFetchInFlight = false
-    private var artworkFetchInFlight = false
+    @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var latestLogCandidateRate: Double?
+    @ObservationIgnored private var stableLogSampleRate: Double?
+    @ObservationIgnored private var latestTrackInfo: TrackInfo?
+    @ObservationIgnored private var latestTrackInfoError: String?
+    @ObservationIgnored private var trackInfoFetchInFlight = false
+    @ObservationIgnored private var artworkFetchInFlight = false
     /// The track whose cover the AppleScript fallback still owes us, if any.
-    private var pendingArtworkTitle: String?
+    @ObservationIgnored private var pendingArtworkTitle: String?
 
     /// A log-derived vote, buffered off the main thread before being folded
     /// into `logRateWindow`. See `enqueueLogVote`.
@@ -57,23 +64,24 @@ final class SampleRateModel: ObservableObject {
     }
 
     private let logVoteQueue = DispatchQueue(label: "com.garykong.choritsu.logvotes")
-    private var pendingLogVotes: [LogVote] = []
-    private var logFlushScheduled = false
+    @ObservationIgnored private var pendingLogVotes: [LogVote] = []
+    @ObservationIgnored private var logFlushScheduled = false
     private static let logFlushInterval: TimeInterval = 0.05
-    private var stableLogSampleRateAt: Date?
-    private var logRateWindow: [(rate: Double, date: Date, weight: Int)] = []
-    private var lastTrackTitle: String?
-    private var lastAppliedSampleRate: Double?
-    private var lastAppliedAt: Date?
-    private var lastArtworkData: Data?
-    private var artworkTrackTitle: String?
-    private var isAdjustingVolume = false
+    @ObservationIgnored private var stableLogSampleRateAt: Date?
+    @ObservationIgnored private var logRateWindow: [(rate: Double, date: Date, weight: Int)] = []
+    @ObservationIgnored private var lastTrackTitle: String?
+    @ObservationIgnored private var lastAppliedSampleRate: Double?
+    @ObservationIgnored private var lastAppliedAt: Date?
+    @ObservationIgnored private var lastArtworkData: Data?
+    @ObservationIgnored private var artworkTrackTitle: String?
+    @ObservationIgnored private var isAdjustingVolume = false
+    @ObservationIgnored private var trackFormatAt: Date?
 
     init() {
         MediaAuthorizationController.requestIfNeeded { granted in
             DispatchQueue.main.async {
                 if !granted {
-                    self.statusMessage = "Media & Apple Music access denied in Privacy & Security."
+                    self.statusMessage = L10n.string("Media & Apple Music access denied in Privacy & Security.")
                 }
             }
         }
@@ -124,14 +132,18 @@ final class SampleRateModel: ObservableObject {
 
         if audioController.setDefaultOutputDevice(deviceID) {
             currentOutputDeviceID = deviceID
-            statusMessage = "Switched output device"
+            statusMessage = L10n.string("Switched output device")
         } else {
-            statusMessage = "Failed to switch output device"
+            statusMessage = L10n.string("Failed to switch output device")
         }
         scheduleQuickRefresh()
     }
 
     func selectSampleRate(_ rate: Double) {
+        guard OutputRateLock.shared.heldRate == nil else {
+            statusMessage = L10n.string("Turn the EQ off to change the sample rate.")
+            return
+        }
         // Manual choice would be reverted by auto switch within a second,
         // so disengage it when they conflict.
         if autoSwitchEnabled,
@@ -143,9 +155,9 @@ final class SampleRateModel: ObservableObject {
         if audioController.setDefaultOutputSampleRate(rate) {
             outputSampleRate = rate
             outputSampleRateDisplay = formatSampleRate(rate)
-            statusMessage = "Output set to \(formatSampleRate(rate))"
+            statusMessage = L10n.format("Output set to %@", formatSampleRate(rate))
         } else {
-            statusMessage = "Failed to set output sample rate"
+            statusMessage = L10n.string("Failed to set output sample rate")
         }
         scheduleQuickRefresh()
     }
@@ -184,24 +196,24 @@ final class SampleRateModel: ObservableObject {
         // the cached value that `applyNowPlaying` reads.
         refreshTrackInfoIfNeeded()
 
-        outputDeviceName = outputDevice.name
-        outputDeviceIcon = outputDevice.iconName
-        outputSampleRate = outputDevice.sampleRate
-        outputSampleRateDisplay = formatSampleRate(outputDevice.sampleRate)
-        currentOutputDeviceID = outputDevice.id
-        outputDevices = audioController.outputDevices()
+        assign(\.outputDeviceName, outputDevice.name)
+        assign(\.outputDeviceIcon, outputDevice.iconName)
+        assign(\.outputSampleRate, outputDevice.sampleRate)
+        assign(\.outputSampleRateDisplay, formatSampleRate(outputDevice.sampleRate))
+        assign(\.currentOutputDeviceID, outputDevice.id)
+        assign(\.outputDevices, audioController.outputDevices())
         if let deviceID = outputDevice.id {
-            availableSampleRates = audioController.availableSampleRates(deviceID: deviceID)
+            assign(\.availableSampleRates, audioController.availableSampleRates(deviceID: deviceID))
         } else {
-            availableSampleRates = []
+            assign(\.availableSampleRates, [])
         }
 
         if !isAdjustingVolume {
             if let volumeInfo = audioController.outputVolumeInfo() {
-                volumeAvailable = volumeInfo.settable
-                outputVolume = Double(volumeInfo.volume)
+                assign(\.volumeAvailable, volumeInfo.settable)
+                assign(\.outputVolume, Double(volumeInfo.volume))
             } else {
-                volumeAvailable = false
+                assign(\.volumeAvailable, false)
             }
         }
 
@@ -229,9 +241,9 @@ final class SampleRateModel: ObservableObject {
     private func applyNowPlaying(_ result: NowPlayingResult,
                                  outputDevice: OutputDeviceInfo) {
         if let errorMessage = result.errorMessage, !errorMessage.isEmpty {
-            currentTrackTitle = "Unavailable"
-            trackSampleRateDisplay = "Unknown"
-            statusMessage = errorMessage
+            assign(\.currentTrackTitle, "Unavailable")
+            assign(\.trackSampleRateDisplay, "Unknown")
+            assign(\.statusMessage, errorMessage)
             return
         }
 
@@ -244,54 +256,68 @@ final class SampleRateModel: ObservableObject {
         }
 
         guard !resolvedTitle.isEmpty else {
-            currentTrackTitle = "Not playing"
-            artistName = ""
-            albumName = ""
-            isPlaying = false
-            elapsedSeconds = nil
-            durationSeconds = nil
+            assign(\.currentTrackTitle, "Not playing")
+            assign(\.artistName, "")
+            assign(\.albumName, "")
+            assign(\.isPlaying, false)
+            assign(\.elapsedSeconds, nil)
+            assign(\.durationSeconds, nil)
+            assign(\.trackFormat, nil)
             updateArtwork(nil)
             updateCurrentSampleRateDisplay()
-            statusMessage = latestTrackInfoError ?? ""
+            assign(\.statusMessage, latestTrackInfoError ?? "")
             return
         }
 
         updateTrackTitle(resolvedTitle)
-        currentTrackTitle = resolvedTitle
-        artistName = info?.artist ?? fallbackTrack?.artist ?? ""
-        albumName = info?.album ?? fallbackTrack?.album ?? ""
-        isPlaying = info?.isPlaying ?? fallbackTrack?.isPlaying ?? false
-        durationSeconds = info?.duration ?? fallbackTrack?.duration
+        assign(\.currentTrackTitle, resolvedTitle)
+        assign(\.artistName, info?.artist ?? fallbackTrack?.artist ?? "")
+        assign(\.albumName, info?.album ?? fallbackTrack?.album ?? "")
+        assign(\.isPlaying, info?.isPlaying ?? fallbackTrack?.isPlaying ?? false)
+        assign(\.durationSeconds, info?.duration ?? fallbackTrack?.duration)
         updateElapsed(info: info, fallback: fallbackTrack)
         updateArtwork(info?.artworkData)
 
         updateCurrentSampleRateDisplay()
 
         guard isPlaying else {
-            statusMessage = "Paused"
+            assign(\.statusMessage, L10n.string("Paused"))
+            return
+        }
+
+        if let held = OutputRateLock.shared.heldRate {
+            assign(\.statusMessage, L10n.format("EQ on — output held at %@", formatSampleRate(held)))
             return
         }
 
         guard autoSwitchEnabled else {
-            statusMessage = "Auto switch disabled"
+            assign(\.statusMessage, L10n.string("Auto switch disabled"))
             return
         }
 
         guard let targetSampleRate = stableLogSampleRate else {
-            statusMessage = "Waiting for log sample rate"
+            assign(\.statusMessage, L10n.string("Waiting for log sample rate"))
             return
         }
 
         if let currentOutputRate = outputDevice.sampleRate,
            abs(currentOutputRate - targetSampleRate) < 1.0 {
-            statusMessage = "Output already at \(formatSampleRate(targetSampleRate))"
+            assign(\.statusMessage, L10n.format("Output already at %@", formatSampleRate(targetSampleRate)))
             return
         }
 
         if audioController.setDefaultOutputSampleRate(targetSampleRate) {
-            statusMessage = "Switched output to \(formatSampleRate(targetSampleRate))"
+            assign(\.statusMessage, L10n.format("Switched output to %@", formatSampleRate(targetSampleRate)))
         } else {
-            statusMessage = "Failed to switch output sample rate"
+            assign(\.statusMessage, L10n.string("Failed to switch output sample rate"))
+        }
+    }
+
+    /// Writes an observed property only when the value actually changes.
+    private func assign<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<SampleRateModel, Value>,
+                                          _ value: Value) {
+        if self[keyPath: keyPath] != value {
+            self[keyPath: keyPath] = value
         }
     }
 
@@ -299,12 +325,12 @@ final class SampleRateModel: ObservableObject {
         if let elapsed = info?.elapsed {
             if isPlaying, let timestamp = info?.timestamp {
                 let projected = elapsed + Date().timeIntervalSince(timestamp)
-                elapsedSeconds = min(projected, durationSeconds ?? projected)
+                assign(\.elapsedSeconds, min(projected, durationSeconds ?? projected))
             } else {
-                elapsedSeconds = elapsed
+                assign(\.elapsedSeconds, elapsed)
             }
         } else {
-            elapsedSeconds = fallback?.position
+            assign(\.elapsedSeconds, fallback?.position)
         }
     }
 
@@ -383,7 +409,17 @@ final class SampleRateModel: ObservableObject {
 
         logController.onStatus = { [weak self] status in
             DispatchQueue.main.async {
-                self?.logStatusMessage = status
+                // Known statuses ("Log stream started") are table keys; anything
+                // else, such as raw `log` stderr, falls through unchanged.
+                self?.logStatusMessage = L10n.string(status)
+            }
+        }
+
+        logController.onTrackFormat = { [weak self] format in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.trackFormatAt = Date()
+                self.assign(\.trackFormat, format)
             }
         }
 
@@ -391,7 +427,7 @@ final class SampleRateModel: ObservableObject {
     }
 
     private func applyLogAutoSwitch(sampleRate: Double) {
-        guard autoSwitchEnabled else { return }
+        guard autoSwitchEnabled, OutputRateLock.shared.heldRate == nil else { return }
 
         let outputDevice = audioController.defaultOutputDeviceInfo()
         guard let currentOutputRate = outputDevice.sampleRate,
@@ -410,9 +446,9 @@ final class SampleRateModel: ObservableObject {
             lastAppliedSampleRate = sampleRate
             lastAppliedAt = Date()
             outputSampleRateDisplay = formatSampleRate(sampleRate)
-            statusMessage = "Switched output to \(formatSampleRate(sampleRate))"
+            statusMessage = L10n.format("Switched output to %@", formatSampleRate(sampleRate))
         } else {
-            statusMessage = "Failed to switch output sample rate"
+            statusMessage = L10n.string("Failed to switch output sample rate")
         }
     }
 
@@ -469,21 +505,21 @@ final class SampleRateModel: ObservableObject {
 
         if stableLogSampleRate == nil {
             if dominantWeight >= 6 && dominance >= 0.7 {
-                lockSampleRate(dominantRate, reason: "Log locked")
+                lockSampleRate(dominantRate, statusKey: "Log locked at %@")
             } else {
                 sampleRateSourceDisplay = "Log (estimating)"
                 trackSampleRateDisplay = "Estimating"
-                logStatusMessage = "Log estimating \(formatSampleRate(dominantRate)) (\(dominantWeight)/\(totalWeight))"
             }
         } else if dominantRate != stableLogSampleRate {
             let stableAge = now.timeIntervalSince(stableLogSampleRateAt ?? now)
             if dominantWeight >= 9 && dominance >= 0.85 && stableAge > 3 {
-                lockSampleRate(dominantRate, reason: "Log switched")
+                lockSampleRate(dominantRate, statusKey: "Log switched at %@")
             }
         }
 
         if stableLogSampleRate == nil {
-            logStatusMessage = "Log estimating \(formatSampleRate(dominantRate)) (\(dominantWeight)/\(totalWeight))"
+            logStatusMessage = L10n.format("Log estimating %@ (%ld/%ld)",
+                                           formatSampleRate(dominantRate), dominantWeight, totalWeight)
         }
     }
 
@@ -491,6 +527,14 @@ final class SampleRateModel: ObservableObject {
         guard !title.isEmpty else { return }
         if let lastTrackTitle, lastTrackTitle != title {
             resetLogLock(reason: "Track changed")
+            // Music logs the new stream's format as playback starts, and the
+            // title poll can trail that by a second or so — keep a format that
+            // just arrived, since it belongs to this track, and drop older ones.
+            if let trackFormatAt, Date().timeIntervalSince(trackFormatAt) < 3 {
+                // fresh: keep
+            } else {
+                trackFormat = nil
+            }
         }
         lastTrackTitle = title
     }
@@ -502,28 +546,28 @@ final class SampleRateModel: ObservableObject {
         latestLogCandidateRate = nil
         trackSampleRateDisplay = "Unknown"
         sampleRateSourceDisplay = "Unknown"
-        logStatusMessage = reason
+        logStatusMessage = L10n.string(reason)
     }
 
     private func updateCurrentSampleRateDisplay() {
         if let stableLogSampleRate {
-            trackSampleRateDisplay = formatSampleRate(stableLogSampleRate)
-            sampleRateSourceDisplay = "Log (locked)"
+            assign(\.trackSampleRateDisplay, formatSampleRate(stableLogSampleRate))
+            assign(\.sampleRateSourceDisplay, "Log (locked)")
         } else if latestLogCandidateRate != nil {
-            trackSampleRateDisplay = "Estimating"
-            sampleRateSourceDisplay = "Log (estimating)"
+            assign(\.trackSampleRateDisplay, "Estimating")
+            assign(\.sampleRateSourceDisplay, "Log (estimating)")
         } else {
-            trackSampleRateDisplay = "Unknown"
-            sampleRateSourceDisplay = "Unknown"
+            assign(\.trackSampleRateDisplay, "Unknown")
+            assign(\.sampleRateSourceDisplay, "Unknown")
         }
     }
 
-    private func lockSampleRate(_ rate: Double, reason: String) {
+    private func lockSampleRate(_ rate: Double, statusKey: String) {
         stableLogSampleRate = rate
         stableLogSampleRateAt = Date()
         trackSampleRateDisplay = formatSampleRate(rate)
         sampleRateSourceDisplay = "Log (locked)"
-        logStatusMessage = "\(reason) at \(formatSampleRate(rate))"
+        logStatusMessage = L10n.format(statusKey, formatSampleRate(rate))
         applyLogAutoSwitch(sampleRate: rate)
     }
 
