@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jcongaku.github.io/apple-music-lossless-eq/sitemap.xml

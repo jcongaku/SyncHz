@@ -3,232 +3,262 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Choritsu 調律 — Lossless sample-rate switcher + parametric EQ for Apple Music</title>
-<meta name="description" content="Choritsu keeps Apple Music bit-perfect by matching your output device to the track's sample rate, then adds an optional parametric EQ for headphones (AutoEQ). No driver, no admin — a LosslessSwitcher alternative for macOS 26.">
-<meta name="theme-color" content="#211E1B">
-<link rel="icon" href="icon_1024.png">
-<meta property="og:title" content="Choritsu 調律">
-<meta property="og:description" content="A lossless sample-rate switcher + parametric EQ for Apple Music on macOS.">
-<meta property="og:image" content="https://jcongaku.github.io/apple-music-lossless-eq/icon_1024.png">
+<title>SyncHz: Apple Music sample-rate switcher and headphone EQ for Mac</title>
+<meta name="description" content="Free Mac menu-bar app that switches your DAC to each Apple Music track's sample rate, 44.1 to 192 kHz, for bit-perfect Hi-Res Lossless. Plus an AutoEq and PEQdB headphone EQ.">
+<link rel="canonical" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<link rel="alternate" hreflang="en" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<link rel="alternate" hreflang="zh-Hans" href="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
+<link rel="alternate" hreflang="x-default" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<meta name="theme-color" content="#F5F4F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18181A" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="SyncHz">
+<meta property="og:title" content="SyncHz for Apple Music on Mac">
+<meta property="og:description" content="Your DAC follows every Apple Music track, 44.1 to 192 kHz, so Hi-Res Lossless plays bit-perfect. Plus a headphone EQ that reads AutoEq and PEQdB presets.">
 <meta property="og:url" content="https://jcongaku.github.io/apple-music-lossless-eq/">
+<meta property="og:image" content="https://jcongaku.github.io/apple-music-lossless-eq/social.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="SyncHz icon and wordmark next to its menu-bar panel showing 96 kHz in sync">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
 <meta name="twitter:card" content="summary_large_image">
-<style>
-:root{
-  --paper:#F2EBDD; --paper2:#EAE0CD; --card:#F6F1E5;
-  --sumi:#211E1B; --sumi2:#15120F;
-  --ink:#2c2722; --ink2:#6f665a; --ink3:#a59b8b;
-  --cream:#F2EBDD;
-  --rikyu:#737842; --rikyu-deep:#5b6033; --rikyu-bright:#8c9152;
-  --ai:#4F6373; --matcha:#708263;
-  --line:rgba(33,30,27,.14); --line-soft:rgba(33,30,27,.08);
-  --cream-line:rgba(242,235,221,.18);
-  --maxw:1060px;
-  --serif:"Hiragino Mincho ProN","Yu Mincho","Songti SC","Noto Serif JP",serif;
-  --sans:-apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN","Segoe UI",system-ui,sans-serif;
+<link rel="stylesheet" href="site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SyncHz",
+  "alternateName": ["同频", "Choritsu"],
+  "description": "Automatic lossless sample-rate switching and a headphone parametric EQ for Apple Music on Mac. Matches the output device to each track's sample rate, 44.1 to 192 kHz, and imports AutoEq and PEQdB presets.",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "macOS 15 or later",
+  "url": "https://jcongaku.github.io/apple-music-lossless-eq/",
+  "downloadUrl": "https://github.com/jcongaku/apple-music-lossless-eq/releases/latest",
+  "image": "https://jcongaku.github.io/apple-music-lossless-eq/icon.png",
+  "screenshot": "https://jcongaku.github.io/apple-music-lossless-eq/screenshots/hero-light.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "sameAs": ["https://github.com/jcongaku/apple-music-lossless-eq"]
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-a{color:inherit;text-decoration:none}
-img{max-width:100%;display:block}
-.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
-.eyebrow{font-family:var(--serif);font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--ink2)}
-
-/* ---- hero ---- */
-.hero{background:linear-gradient(#211E1B,#15120F);color:var(--cream);padding:0 0 76px;position:relative}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 24px;max-width:var(--maxw);margin:0 auto}
-.brand{display:flex;align-items:center;gap:11px;font-family:var(--serif);letter-spacing:.06em}
-.brand .ji{font-size:1.15rem}
-.brand .ro{font-size:.74rem;letter-spacing:.32em;text-transform:uppercase;color:rgba(242,235,221,.6)}
-.brand img{width:30px;height:30px;border-radius:8px}
-.navlinks{display:flex;gap:26px;align-items:center;font-size:.86rem;color:rgba(242,235,221,.72)}
-.navlinks a:hover{color:var(--cream)}
-.navlinks .ghost{display:inline-flex;align-items:center;gap:7px}
-@media(max-width:620px){.navlinks .hide{display:none}}
-
-.herobody{max-width:760px;margin:30px auto 0;padding:0 24px;text-align:center}
-.mark{width:300px;max-width:74%;margin:0 auto 30px}
-.h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.6rem,7vw,4rem);line-height:1.02;letter-spacing:.02em}
-.h1 .ji{display:block;font-size:.42em;letter-spacing:.5em;color:var(--rikyu-bright);margin-top:.7em;padding-left:.5em}
-.lede{font-size:clamp(1.05rem,2.4vw,1.3rem);color:rgba(242,235,221,.9);margin:26px auto 0;max-width:30ch;font-weight:500}
-.sub{font-size:1rem;color:rgba(242,235,221,.62);margin:16px auto 0;max-width:46ch}
-
-.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:36px}
-.btn{display:inline-flex;align-items:center;gap:9px;font-size:.96rem;font-weight:600;padding:13px 24px;border-radius:13px;transition:transform .12s ease,background .2s ease,border-color .2s ease;border:1px solid transparent}
-.btn:active{transform:scale(.975)}
-.btn-primary{background:var(--rikyu);color:#fbf8ef;box-shadow:0 8px 26px rgba(115,120,66,.34)}
-.btn-primary:hover{background:var(--rikyu-bright)}
-.btn-ghost{border-color:var(--cream-line);color:var(--cream)}
-.btn-ghost:hover{border-color:rgba(242,235,221,.45);background:rgba(242,235,221,.06)}
-.meta{margin-top:20px;font-size:.8rem;color:rgba(242,235,221,.5);letter-spacing:.02em}
-.meta b{color:rgba(242,235,221,.78);font-weight:600}
-
-/* ---- sections ---- */
-section.band{padding:84px 0}
-.sectionhead{text-align:center;margin-bottom:44px}
-.sectionhead h2{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,4vw,2.2rem);margin-top:10px;letter-spacing:.01em}
-.sectionhead p{color:var(--ink2);margin-top:12px;max-width:52ch;margin-inline:auto}
-
-/* ---- screenshots ---- */
-.shot-main{border-radius:20px;border:1px solid var(--line);background:var(--card);overflow:hidden;box-shadow:0 24px 60px rgba(33,30,27,.16)}
-.shot-main img{width:100%}
-.cap{text-align:center;color:var(--ink3);font-size:.82rem;margin-top:16px}
-.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
-.trio figure{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 12px 30px rgba(33,30,27,.1)}
-.trio img{border-radius:8px}
-.trio figcaption{text-align:center;color:var(--ink2);font-size:.78rem;margin-top:12px}
-@media(max-width:680px){.trio{grid-template-columns:1fr;max-width:340px;margin-inline:auto}}
-
-/* ---- features ---- */
-.feat-band{background:var(--paper2);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.grid{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 22px}
-.card .ji{font-family:var(--serif);font-size:1.35rem;color:var(--rikyu-deep)}
-.card h3{font-size:1.05rem;margin:12px 0 8px;font-weight:600}
-.card p{color:var(--ink2);font-size:.92rem;line-height:1.6}
-
-/* ---- how ---- */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:s}
-@media(max-width:740px){.steps{grid-template-columns:1fr;max-width:460px;margin-inline:auto}}
-.step{position:relative;padding-left:8px}
-.step .n{font-family:var(--serif);font-size:.78rem;letter-spacing:.2em;color:var(--rikyu-deep)}
-.step h4{font-size:1rem;margin:8px 0 6px;font-weight:600}
-.step p{color:var(--ink2);font-size:.9rem}
-
-/* ---- install ---- */
-.install-card{max-width:720px;margin:0 auto;background:var(--sumi);color:var(--cream);border-radius:20px;padding:34px 32px;text-align:center}
-.install-card h2{font-family:var(--serif);font-weight:600;font-size:1.5rem}
-.install-card p{color:rgba(242,235,221,.72);margin:14px auto 22px;max-width:48ch;font-size:.94rem}
-.code{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#15120F;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;color:var(--cream);text-align:left;overflow-x:auto}
-.code button{flex:none;background:var(--rikyu);color:#fbf8ef;border:none;border-radius:8px;padding:7px 13px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:var(--sans)}
-.code button:hover{background:var(--rikyu-bright)}
-.note{margin-top:18px;font-size:.78rem;color:rgba(242,235,221,.45)}
-
-/* ---- footer ---- */
-footer{padding:60px 0 48px;border-top:1px solid var(--line-soft);text-align:center;color:var(--ink2)}
-footer .req{font-size:.9rem}
-footer .seal{font-family:var(--serif);font-size:1.2rem;color:var(--rikyu-deep);margin:18px 0 6px}
-footer .links{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:18px;font-size:.86rem}
-footer .links a{color:var(--ink);border-bottom:1px solid var(--line)}
-footer .links a:hover{color:var(--rikyu-deep);border-color:var(--rikyu)}
-footer .fine{margin-top:24px;font-size:.76rem;color:var(--ink3)}
-</style>
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Does SyncHz make Apple Music bit-perfect?",
+      "acceptedAnswer": { "@type": "Answer", "text": "With the EQ off, yes: SyncHz switches the output device to the sample rate of the track Apple Music is decoding, so nothing is resampled, and it never touches the audio. With the EQ on, the samples are processed, and the panel says so." } },
+    { "@type": "Question", "name": "Is SyncHz the same as LosslessSwitcher?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Same core idea, different build. SyncHz adds a headphone EQ, a now-playing panel, device and volume control and 12 languages, and targets macOS 15 and 26. LosslessSwitcher is the original and still excellent, especially on older macOS." } },
+    { "@type": "Question", "name": "Does SyncHz work with Spotify, Tidal or Qobuz?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. SyncHz reads Apple Music's own playback, so it is for Apple Music only." } },
+    { "@type": "Question", "name": "Do I need a driver like BlackHole?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Rate switching is a plain Core Audio setting, and the EQ uses Apple's process-tap API. No driver, no admin rights." } },
+    { "@type": "Question", "name": "Which DACs work?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Any output device that macOS can set to more than one sample rate in Audio MIDI Setup: USB DACs, headphone amplifiers and audio interfaces." } }
+  ]
+}
+</script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
-<header class="hero">
-  <nav class="nav">
-    <a class="brand" href="#top">
-      <img src="icon_1024.png" alt="Choritsu icon">
-      <span><span class="ji">調律</span> <span class="ro">Choritsu</span></span>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="SyncHz home">
+      <img src="favicon.png" width="30" height="30" alt="">
+      <span>SyncHz</span><span class="tag" lang="zh-Hans">同频</span>
     </a>
-    <div class="navlinks">
-      <a class="hide" href="#features">Features</a>
-      <a class="hide" href="#how">How it works</a>
-      <a class="ghost" href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub ↗</a>
-      <a href="#get">Download</a>
-    </div>
-  </nav>
-
-  <div class="herobody" id="top">
-    <svg class="mark" viewBox="0 0 360 184" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Choritsu wave mark — two offset sine waves with EQ band nodes">
-      <polyline points="48.0,75.3 55.0,69.7 62.0,65.0 69.0,61.2 76.0,58.4 83.0,56.6 90.0,56.0 97.0,56.5 104.0,58.1 111.0,60.8 118.0,64.6 125.0,69.2 132.0,74.7 139.0,80.8 146.0,87.4 153.0,94.4 160.0,101.6 167.0,108.8 174.0,115.9 181.0,122.5 188.0,128.7 195.0,134.3 202.0,139.0 209.0,142.8 216.0,145.6 223.0,147.4 230.0,148.0 237.0,147.5 244.0,145.9 251.0,143.2 258.0,139.4 265.0,134.8 272.0,129.3 279.0,123.2 286.0,116.6 293.0,109.6 300.0,102.4 307.0,95.2 314.0,88.1 321.0,81.5 328.0,75.3"
-            fill="none" stroke="#737842" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="40.0,92.0 47.0,84.8 54.0,77.8 61.0,71.1 68.0,65.0 75.0,59.5 82.0,54.8 89.0,51.0 96.0,48.3 103.0,46.6 110.0,46.0 117.0,46.6 124.0,48.3 131.0,51.0 138.0,54.8 145.0,59.5 152.0,65.0 159.0,71.1 166.0,77.8 173.0,84.8 180.0,92.0 187.0,99.2 194.0,106.2 201.0,112.9 208.0,119.0 215.0,124.5 222.0,129.2 229.0,133.0 236.0,135.7 243.0,137.4 250.0,138.0 257.0,137.4 264.0,135.7 271.0,133.0 278.0,129.2 285.0,124.5 292.0,119.0 299.0,112.9 306.0,106.2 313.0,99.2 320.0,92.0"
-            fill="none" stroke="#F2EBDD" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="110" cy="46" r="13" fill="#211E1B" stroke="#F2EBDD" stroke-width="5.5"/>
-      <circle cx="250" cy="138" r="13" fill="#211E1B" stroke="#F2EBDD" stroke-width="5.5"/>
-    </svg>
-
-    <h1 class="h1">Choritsu<span class="ji">調律</span></h1>
-    <p class="lede">Keep Apple Music bit-perfect — then tune your headphones to their target curve.</p>
-    <p class="sub">A lossless sample-rate switcher and parametric EQ for Apple Music, in one quiet menu-bar panel. No driver, no admin, nothing left running in the background.</p>
-
-    <div class="cta" id="get">
-      <a class="btn btn-primary" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/download/v2.3.0/Choritsu-2.3.0.dmg">↓ Download for macOS</a>
-      <a class="btn btn-ghost" href="https://github.com/jcongaku/apple-music-lossless-eq">View source</a>
-    </div>
-    <p class="meta"><b>macOS 26 Tahoe+</b> · v2.3.0 · free &amp; open source (MIT)</p>
+    <nav aria-label="Primary">
+      <a class="wide" href="#workbench">How it works</a>
+      <a class="wide" href="#install">Install</a>
+      <a href="zh/" hreflang="zh-Hans" lang="zh-Hans">中文</a>
+      <a class="wide" href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a>
+      <a class="get" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">Download</a>
+    </nav>
   </div>
 </header>
 
-<main>
-  <section class="band wrap">
-    <div class="sectionhead">
-      <span class="eyebrow">一目 · A look</span>
-      <h2>One continuous popover</h2>
-      <p>The EQ docks to the right of the main panel — now playing, source-matched rate, and the response curve over a live spectrum.</p>
-    </div>
-    <div class="shot-main"><img src="eq.png" alt="Choritsu with the parametric EQ panel open: an AutoEQ preset imported, the response curve drawn over a live spectrum, draggable band points, and per-band frequency/gain/Q controls"></div>
-    <p class="cap">Sennheiser HD600 AutoEQ preset, applied to Apple Music through a muted process tap.</p>
-    <div class="trio">
-      <figure><img src="main.png" alt="Now playing panel with artwork, transport, the sample-rate card in sync, and the output device with volume"><figcaption>Now playing &amp; source rate</figcaption></figure>
-      <figure><img src="devices.png" alt="Output device picker"><figcaption>Output device picker</figcaption></figure>
-      <figure><img src="rates.png" alt="Sample-rate override menu from 44.1 to 352.8 kHz"><figcaption>Manual rate override</figcaption></figure>
-    </div>
-  </section>
-
-  <section class="feat-band" id="features">
-    <div class="band wrap">
-      <div class="sectionhead">
-        <span class="eyebrow">特長 · Features</span>
-        <h2>Tuning, end to end</h2>
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1>Every Apple&nbsp;Music track at its own sample rate.</h1>
+        <p class="lede">SyncHz is a free menu-bar app for Mac. It switches your DAC to the rate of the track Apple Music is playing, from 44.1 to 192 kHz, so Lossless and Hi-Res Lossless arrive bit-perfect. When you want it, a headphone EQ that reads AutoEq and PEQdB presets.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16h12"/></svg>
+            Download for Mac
+          </a>
+          <a class="button" href="https://github.com/jcongaku/apple-music-lossless-eq">Source on GitHub</a>
+        </div>
+        <p class="fine">Free and open source. macOS 15 or later, Apple Silicon and Intel.</p>
       </div>
-      <div class="grid">
-        <div class="card"><div class="ji">無損</div><h3>Lossless rate-matching</h3><p>Locks your output device to the track's real sample rate — 44.1 to 192 kHz, within a second of a track change — so macOS never silently resamples behind your back.</p></div>
-        <div class="card"><div class="ji">均衡</div><h3>Parametric EQ</h3><p>A multi-band PEQ for headphones and speakers. Import an AutoEQ preset, drag the response curve, scroll to set Q, watch the live spectrum, keep a profile per pair.</p></div>
-        <div class="card"><div class="ji">無垢</div><h3>No driver, no admin</h3><p>The EQ runs through a muted Core Audio process tap — no virtual sound card, no kernel extension, no admin rights, and clearly marked when it's on.</p></div>
-        <div class="card"><div class="ji">再生</div><h3>Now playing &amp; transport</h3><p>Artwork, title, album, a live progress bar, and play / pause / previous / next — right from the menu bar.</p></div>
-        <div class="card"><div class="ji">硝子</div><h3>Native Liquid Glass</h3><p>Built on real macOS 26 <code>glassEffect</code> materials, in a calm <em>wabi-sabi</em> palette that disappears into the desktop.</p></div>
-        <div class="card"><div class="ji">言語</div><h3>Localized</h3><p>English, 日本語, 简体中文, and 繁體中文 — including the EQ panel.</p></div>
+
+      <figure class="readout" data-state="sync" data-sync="In sync" data-switching="Switching"
+        aria-label="SyncHz switching the output device to match each Apple Music track"
+        data-tracks='[
+          {"title":"Clair de lune","artist":"Claude Debussy","rate":"96","format":"24-bit ALAC, Hi-Res Lossless"},
+          {"title":"Gymnopédie No. 1","artist":"Erik Satie","rate":"44.1","format":"16-bit ALAC, Lossless"},
+          {"title":"Goldberg Variations: Aria","artist":"Johann Sebastian Bach","rate":"192","format":"24-bit ALAC, Hi-Res Lossless"},
+          {"title":"Nocturne in E-flat, Op. 9 No. 2","artist":"Frédéric Chopin","rate":"88.2","format":"24-bit ALAC, Hi-Res Lossless"},
+          {"title":"The Lark Ascending","artist":"Ralph Vaughan Williams","rate":"48","format":"24-bit ALAC, Lossless"},
+          {"title":"Pavane pour une infante défunte","artist":"Maurice Ravel","rate":"176.4","format":"24-bit ALAC, Hi-Res Lossless"}
+        ]'>
+        <div class="readout-head">
+          <div class="readout-track" aria-live="polite"><b>Clair de lune</b><span>Claude Debussy</span></div>
+          <span class="pill"><span>In sync</span></span>
+        </div>
+        <div class="rates">
+          <div class="side src"><small>Apple Music</small><div class="rate"><span class="num">96</span><span class="unit">kHz</span></div></div>
+          <svg class="flow" viewBox="0 0 92 20" aria-hidden="true">
+            <path class="track" d="M2 10h82" stroke-width="1.5" fill="none"/>
+            <path class="dots" d="M2 10h80" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+            <path d="M80 4l7 6-7 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="side out"><small>Your DAC</small><div class="rate"><span class="num">96</span><span class="unit">kHz</span></div></div>
+        </div>
+        <p class="format"><span class="what">24-bit ALAC, Hi-Res Lossless</span></p>
+        <ol class="keys" aria-label="Sample rates Apple Music streams">
+          <li data-rate="44.1">44.1</li><li data-rate="48">48</li><li data-rate="88.2">88.2</li><li data-rate="96" class="src out">96</li><li data-rate="176.4">176.4</li><li data-rate="192">192</li>
+        </ol>
+      </figure>
+    </div>
+  </section>
+
+  <figure class="shot wrap">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="screenshots/hero-dark.png">
+      <img src="screenshots/hero-light.png" width="811" height="556" fetchpriority="high"
+        alt="SyncHz's menu-bar panel next to its parametric EQ: Apple Music playing Clair de lune as 24-bit 96 kHz ALAC, the output locked to 96 kHz, and a Sennheiser HD 600 AutoEq preset drawn over a live spectrum">
+    </picture>
+    <figcaption>The panel lives in your menu bar. The EQ opens beside it.</figcaption>
+  </figure>
+
+  <section class="section" aria-labelledby="what">
+    <div class="wrap">
+      <h2 id="what">Two jobs, done quietly.</h2>
+      <p class="intro">macOS keeps your output device at one sample rate and resamples everything else without telling you. SyncHz fixes that first, and then, only if you ask, corrects your headphones.</p>
+      <div class="duo">
+        <div>
+          <h3>Sample-rate switching</h3>
+          <p>SyncHz reads the format Apple Music is decoding and sets your output device to match within about a second of a track change. It is the same setting you would change by hand in Audio MIDI Setup.</p>
+          <ul class="facts">
+            <li><b>Every Apple Music rate:</b> 44.1, 48, 88.2, 96, 176.4 and 192 kHz</li>
+            <li><b>Source and output side by side,</b> with the codec, bit depth and quality tier</li>
+            <li><b>Debounced,</b> so it never flaps in the middle of a track</li>
+            <li><b>Manual override</b> for any rate your device supports</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Headphone EQ</h3>
+          <p>A parametric equalizer for Apple Music that needs no virtual driver. Import a preset, drag the curve, scroll to set Q, and keep a profile for each pair of headphones.</p>
+          <ul class="facts">
+            <li><b>AutoEq, PEQdB and Equalizer APO</b> presets import as they are</li>
+            <li><b>Up to 32 bands:</b> peaks, low shelves and high shelves</li>
+            <li><b>Correct at every rate,</b> re-fitted to the track that is playing</li>
+            <li><b>Follow the track</b> or hold the EQ at 48 kHz, your choice</li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="band wrap" id="how">
-    <div class="sectionhead">
-      <span class="eyebrow">仕組み · How it works</span>
-      <h2>Outside the signal path, until you ask</h2>
-      <p>Choritsu infers the playing track's sample rate from the Core Audio log stream, then changes the same device setting you could change in Audio MIDI Setup — pure HAL property access, nothing in the audio path.</p>
-    </div>
-    <div class="steps">
-      <div class="step"><div class="n">壱 · 01</div><h4>Follow the source</h4><p>Detect the decoded rate and match the output device, debounced so it never flaps mid-track.</p></div>
-      <div class="step"><div class="n">弐 · 02</div><h4>Tap, only if asked</h4><p>Turn on the EQ and a muted process tap feeds Apple Music's audio through a biquad cascade — no driver.</p></div>
-      <div class="step"><div class="n">参 · 03</div><h4>Stay correct</h4><p>EQ coefficients recompute on every rate change, so a correction holds from 44.1 to 192 kHz.</p></div>
+  <section class="section" id="workbench" aria-labelledby="workbench-title">
+    <div class="wrap">
+      <h2 id="workbench-title">Notes from the workbench.</h2>
+      <p class="intro">I built SyncHz for my own listening: a HiFiMAN Susvara, a Sennheiser HD 800 S and an HD 600 on the desk, JVC HA-FW10000 in-ears on the go, and a lot of Apple Music. These are the parts I am proudest of.</p>
+
+      <article class="note">
+        <h3>A PEQ on Apple's Accelerate, in double precision</h3>
+        <div class="body">
+          <p>The first EQ engine was a hand-written biquad cascade in Swift, one sample at a time. Accurate, and about 10% of a CPU core for 16 bands of stereo at 192 kHz. Now the whole cascade runs on <b><code>vDSP_biquadD</code></b> from Accelerate, a block of up to 1,024 frames per call.</p>
+          <div class="bars" role="group" aria-label="CPU use, 16 bands of stereo at 192 kHz, one Apple Silicon core">
+            <div class="bar"><span class="name">Swift, one sample at a time</span><span class="value">10.1%</span><span class="meter"><i style="width:100%"></i></span></div>
+            <div class="bar ours"><span class="name"><code>vDSP_biquadD</code>, SyncHz today</span><span class="value">0.55%</span><span class="meter"><i style="width:5.4%"></i></span></div>
+            <div class="bar bad"><span class="name"><code>vDSP.Biquad&lt;Float&gt;</code>, fast but off by −11 dB</span><span class="value">0.61%</span><span class="meter"><i style="width:6%"></i></span></div>
+          </div>
+          <p>The single-precision path is just as fast and unusable: bass filters with a high Q have poles so close to the unit circle that <code>Float</code> coefficients cannot place them, and headphone presets are full of those filters. So the maths stays in <code>Double</code>. On the audio thread there are no locks and no allocations; a new preset arrives through one atomic swap, and two filter banks crossfade over 20 ms so an edit never clicks.</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <h3>Speaking AutoEq and PEQdB fluently</h3>
+        <div class="body">
+          <p>SyncHz uses the same RBJ cookbook filters and shelf conventions as both generators, so a preset means exactly what it meant on their side. The subtle part is the sample rate. Generators fit their filters at one rate, <b>44.1 kHz for AutoEq and 48 kHz for PEQdB</b>, and the same numbers drift in the top octave when played at 96 or 192 kHz.</p>
+          <div class="bars" role="group" aria-label="Largest response error at 96 and 192 kHz on real presets">
+            <div class="bar"><span class="name">Real PEQdB presets, played unchanged</span><span class="value">up to 4.3 dB</span><span class="meter"><i style="width:100%"></i></span></div>
+            <div class="bar"><span class="name">A typical AutoEq preset, played unchanged</span><span class="value">1.9 dB</span><span class="meter"><i style="width:44%"></i></span></div>
+            <div class="bar ours"><span class="name">Re-fitted by SyncHz at the playback rate</span><span class="value">≈0.04 dB</span><span class="meter"><i style="width:1%"></i></span></div>
+          </div>
+          <p>Each band is re-fitted at the rate that is playing to the response it had at its design rate, and split into two sections when one cannot follow. The fit is cached, so a rate change costs nothing you can hear.</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <h3>Apple Music, tapped without a driver</h3>
+        <div class="body">
+          <p>The EQ uses the Core Audio process tap from macOS 14.4: a muted tap on Apple Music feeds a private aggregate device, the filters run there, and the result goes to your real output. A few lessons from getting it right:</p>
+          <ul class="ticks">
+            <li><b>Tap the device's own stream,</b> not the stereo mixdown. The mixdown is pinned to 48 kHz and resamples a 96 kHz track before you see it.</li>
+            <li><b>Order the aggregate's inputs:</b> the tap comes after the device's own inputs, or a DAC with a microphone input hands you silence.</li>
+            <li><b>Declare audio input,</b> even though nothing is recorded. Without it macOS denies the tap without a word.</li>
+          </ul>
+          <p>With the EQ off, SyncHz is out of the signal path entirely.</p>
+        </div>
+      </article>
     </div>
   </section>
 
-  <section class="band wrap">
-    <div class="install-card">
-      <h2>Get Choritsu</h2>
-      <p>Download the disk image, open it, and drag <b>Choritsu.app</b> to your Applications folder. The build is ad-hoc signed (not yet notarized), so clear the quarantine flag once:</p>
-      <div class="code"><span>xattr -dr com.apple.quarantine /Applications/Choritsu.app</span><button onclick="navigator.clipboard.writeText('xattr -dr com.apple.quarantine /Applications/Choritsu.app');this.textContent='Copied'">Copy</button></div>
-      <p class="note">macOS 26 Tahoe or later · Apple Music (subscription or local library)</p>
-      <div class="cta" style="margin-top:26px">
-        <a class="btn btn-primary" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/download/v2.3.0/Choritsu-2.3.0.dmg">↓ Download v2.3.0</a>
-        <a class="btn btn-ghost" href="https://github.com/jcongaku/apple-music-lossless-eq/releases">All releases</a>
+  <section class="section" aria-labelledby="languages">
+    <div class="wrap">
+      <h2 id="languages">In your language.</h2>
+      <div class="langs">
+        <figure><img src="screenshots/panel-zh-Hans.png" width="680" height="896" loading="lazy" alt="SyncHz panel in Simplified Chinese"><figcaption lang="zh-Hans">简体中文</figcaption></figure>
+        <figure><img src="screenshots/panel-ja.png" width="680" height="896" loading="lazy" alt="SyncHz panel in Japanese"><figcaption lang="ja">日本語</figcaption></figure>
+        <figure><img src="screenshots/panel-de.png" width="680" height="896" loading="lazy" alt="SyncHz panel in German"><figcaption lang="de">Deutsch</figcaption></figure>
+      </div>
+      <p class="langlist">English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Español, Français, Italiano, Nederlands, Português (Brasil) and Русский. Switch any time from the ⋯ menu, whatever language your Mac is set to.</p>
+    </div>
+  </section>
+
+  <section class="section" id="install" aria-labelledby="install-title">
+    <div class="wrap">
+      <h2 id="install-title">Install in a minute.</h2>
+      <ol class="steps">
+        <li><div><h3>Download the app</h3><p>Get the latest <code>.dmg</code> from <a href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">GitHub Releases</a> and drag SyncHz into Applications.</p></div></li>
+        <li><div><h3>Allow the first launch</h3><p>SyncHz is not notarized yet, so macOS blocks the first launch. Run this once in Terminal:</p>
+          <div class="code"><code>xattr -dr com.apple.quarantine /Applications/SyncHz.app</code><button class="copy" type="button" data-label="Copy" data-copied="Copied">Copy</button></div></div></li>
+        <li><div><h3>Play something in Apple Music</h3><p>Allow SyncHz to control Music when asked. Turning on the EQ for the first time asks for audio access, which lets the tap receive Apple Music's sound. Your microphone is never recorded.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="faq-title">
+    <div class="wrap">
+      <h2 id="faq-title">Questions.</h2>
+      <div class="faq">
+        <details><summary>Does SyncHz make Apple Music bit-perfect?</summary><p>With the EQ off, yes. The output device runs at the rate of the track Apple Music is decoding, so nothing is resampled, and SyncHz never touches the audio. With the EQ on, the samples are processed, and the panel says so.</p></details>
+        <details><summary>Is it the same as LosslessSwitcher?</summary><p>Same core idea, different build. SyncHz adds the headphone EQ, a now-playing panel, device and volume control and 12 languages, and targets macOS 15 and 26. <a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a> is the original and still excellent, especially on older macOS.</p></details>
+        <details><summary>Does it work with Spotify, Tidal or Qobuz?</summary><p>No. SyncHz reads Apple Music's own playback, so it is for Apple Music only.</p></details>
+        <details><summary>Do I need a driver like BlackHole?</summary><p>No. Rate switching is a plain Core Audio setting, and the EQ uses Apple's process-tap API. No driver, no admin rights.</p></details>
+        <details><summary>Which DACs work?</summary><p>Any output device that macOS can set to more than one sample rate in Audio MIDI Setup: USB DACs, headphone amplifiers and audio interfaces.</p></details>
+        <details><summary>Does it collect any data?</summary><p>No. Its only network request is a check for a newer release on GitHub, once per launch. No account, no identifier, no analytics.</p></details>
       </div>
     </div>
   </section>
 </main>
 
-<footer>
+<footer class="foot">
   <div class="wrap">
-    <p class="seal">調律</p>
-    <p class="req">Made for careful listening · 「音源と、同じ律で。」</p>
-    <div class="links">
-      <a href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a>
-      <a href="https://github.com/jcongaku/apple-music-lossless-eq/releases">Releases</a>
-      <a href="https://github.com/jcongaku/apple-music-lossless-eq/blob/main/LICENSE">MIT License</a>
-      <a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a>
-      <a href="https://github.com/jaakkopasanen/AutoEq">AutoEQ</a>
-    </div>
-    <p class="fine">Inspired by LosslessSwitcher. Headphone corrections from AutoEQ. Not affiliated with Apple. Apple Music is a trademark of Apple Inc.</p>
+    <p>SyncHz is MIT-licensed and made by one listener. It stands on <a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a>, <a href="https://github.com/jaakkopasanen/AutoEq">AutoEq</a> and <a href="https://peqdb.com/">PEQdB</a>. Apple Music is a trademark of Apple Inc.; SyncHz is not affiliated with Apple.</p>
+    <nav aria-label="Footer"><a href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a><a href="https://github.com/jcongaku/apple-music-lossless-eq/releases">Releases</a><a href="zh/" hreflang="zh-Hans" lang="zh-Hans">中文</a></nav>
   </div>
 </footer>
-
+<script src="site.js" defer></script>
 </body>
 </html>

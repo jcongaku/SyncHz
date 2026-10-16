@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>同频 SyncHz：Apple Music 无损采样率自动切换与耳机均衡（Mac）</title>
+<meta name="description" content="免费开源的 Mac 菜单栏工具：自动把解码器切换到 Apple Music 每首歌的真实采样率（44.1–192 kHz），高解析度无损 bit-perfect 输出；可选导入 AutoEq、PEQdB 预设的耳机参数均衡。">
+<link rel="canonical" href="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
+<link rel="alternate" hreflang="en" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<link rel="alternate" hreflang="zh-Hans" href="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
+<link rel="alternate" hreflang="x-default" href="https://jcongaku.github.io/apple-music-lossless-eq/">
+<meta name="theme-color" content="#F5F4F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18181A" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="同频 SyncHz">
+<meta property="og:title" content="同频 SyncHz：给 Mac 上的 Apple Music 用">
+<meta property="og:description" content="解码器自动跟随每首 Apple Music 曲目的采样率，44.1 到 192 kHz，高解析度无损 bit-perfect；需要时再叠一层读取 AutoEq、PEQdB 预设的耳机均衡。">
+<meta property="og:url" content="https://jcongaku.github.io/apple-music-lossless-eq/zh/">
+<meta property="og:image" content="https://jcongaku.github.io/apple-music-lossless-eq/social.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="同频 SyncHz 的图标与菜单栏面板，显示 96 kHz 已同步">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="../site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "同频 SyncHz",
+  "alternateName": ["SyncHz", "Choritsu", "调律"],
+  "inLanguage": "zh-Hans",
+  "description": "Mac 上 Apple Music 的无损采样率自动切换工具，附带耳机参数均衡。把输出设备切换到每首曲目的采样率（44.1–192 kHz），并可导入 AutoEq、PEQdB 预设。",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "macOS 15 或更高版本",
+  "url": "https://jcongaku.github.io/apple-music-lossless-eq/zh/",
+  "downloadUrl": "https://github.com/jcongaku/apple-music-lossless-eq/releases/latest",
+  "image": "https://jcongaku.github.io/apple-music-lossless-eq/icon.png",
+  "screenshot": "https://jcongaku.github.io/apple-music-lossless-eq/screenshots/hero-zh-Hans-light.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
+  "sameAs": ["https://github.com/jcongaku/apple-music-lossless-eq"]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "zh-Hans",
+  "mainEntity": [
+    { "@type": "Question", "name": "同频能让 Apple Music 做到 bit-perfect 吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "关闭均衡时可以：输出设备运行在 Apple Music 正在解码的曲目采样率上，不经过重采样，同频也不经手音频。开启均衡后音频会被处理，面板会明确标注。" } },
+    { "@type": "Question", "name": "和 LosslessSwitcher 有什么区别？",
+      "acceptedAnswer": { "@type": "Answer", "text": "核心思路相同，实现不同。同频额外提供耳机均衡、正在播放面板、输出设备与音量控制和 12 种界面语言，面向 macOS 15 与 26。LosslessSwitcher 是这个思路的开创者，至今依然优秀，旧版 macOS 用户推荐使用。" } },
+    { "@type": "Question", "name": "支持 Spotify、Tidal 或 Qobuz 吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不支持。同频读取的是 Apple Music 自己的播放信息，只适用于 Apple Music。" } },
+    { "@type": "Question", "name": "需要安装 BlackHole 这类虚拟声卡吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不需要。切换采样率只是一个普通的 Core Audio 设置，均衡使用苹果的 process tap 接口。无需驱动，无需管理员权限。" } },
+    { "@type": "Question", "name": "哪些解码器可以用？",
+      "acceptedAnswer": { "@type": "Answer", "text": "任何能在「音频 MIDI 设置」里切换多种采样率的输出设备：USB 解码器、耳放和声卡都可以。" } }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="同频 SyncHz 首页">
+      <img src="../favicon.png" width="30" height="30" alt="">
+      <span>同频</span><span class="tag">SyncHz</span>
+    </a>
+    <nav aria-label="主导航">
+      <a class="wide" href="#workbench">工作原理</a>
+      <a class="wide" href="#install">安装</a>
+      <a href="../" hreflang="en" lang="en">English</a>
+      <a class="wide" href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a>
+      <a class="get" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">下载</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1>每一首 Apple&nbsp;Music，<br>都用它自己的<wbr>采样率播放。</h1>
+        <p class="lede">同频是一款免费的 Mac 菜单栏工具。它会把你的解码器自动切换到 Apple Music 正在播放的曲目采样率，从 44.1 到 192 kHz，让无损和高解析度无损原样到达耳机。需要时，再叠一层能读取 AutoEq 与 PEQdB 预设的耳机均衡。</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16h12"/></svg>
+            下载 Mac 版
+          </a>
+          <a class="button" href="https://github.com/jcongaku/apple-music-lossless-eq">在 GitHub 查看源码</a>
+        </div>
+        <p class="fine">免费开源。需要 macOS 15 或更高版本，支持 Apple 芯片与 Intel。</p>
+      </div>
+
+      <figure class="readout" data-state="sync" data-sync="已同步" data-switching="切换中"
+        aria-label="同频随 Apple Music 曲目切换输出设备的采样率"
+        data-tracks='[
+          {"title":"月光","artist":"德彪西","rate":"96","format":"24 位 ALAC，高解析度无损"},
+          {"title":"第一号吉诺佩第","artist":"萨蒂","rate":"44.1","format":"16 位 ALAC，无损"},
+          {"title":"哥德堡变奏曲：咏叹调","artist":"巴赫","rate":"192","format":"24 位 ALAC，高解析度无损"},
+          {"title":"降 E 大调夜曲，作品 9 之 2","artist":"肖邦","rate":"88.2","format":"24 位 ALAC，高解析度无损"},
+          {"title":"云雀高飞","artist":"沃恩·威廉斯","rate":"48","format":"24 位 ALAC，无损"},
+          {"title":"悼念公主的帕凡舞曲","artist":"拉威尔","rate":"176.4","format":"24 位 ALAC，高解析度无损"}
+        ]'>
+        <div class="readout-head">
+          <div class="readout-track" aria-live="polite"><b>月光</b><span>德彪西</span></div>
+          <span class="pill"><span>已同步</span></span>
+        </div>
+        <div class="rates">
+          <div class="side src"><small>Apple Music</small><div class="rate"><span class="num">96</span><span class="unit">kHz</span></div></div>
+          <svg class="flow" viewBox="0 0 92 20" aria-hidden="true">
+            <path class="track" d="M2 10h82" stroke-width="1.5" fill="none"/>
+            <path class="dots" d="M2 10h80" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+            <path d="M80 4l7 6-7 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="side out"><small>你的解码器</small><div class="rate"><span class="num">96</span><span class="unit">kHz</span></div></div>
+        </div>
+        <p class="format"><span class="what">24 位 ALAC，高解析度无损</span></p>
+        <ol class="keys" aria-label="Apple Music 提供的采样率">
+          <li data-rate="44.1">44.1</li><li data-rate="48">48</li><li data-rate="88.2">88.2</li><li data-rate="96" class="src out">96</li><li data-rate="176.4">176.4</li><li data-rate="192">192</li>
+        </ol>
+      </figure>
+    </div>
+  </section>
+
+  <figure class="shot wrap">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="../screenshots/hero-zh-Hans-dark.png">
+      <img src="../screenshots/hero-zh-Hans-light.png" width="811" height="556" fetchpriority="high"
+        alt="同频的菜单栏面板与参数均衡：Apple Music 正在播放 24 位 96 kHz ALAC 的《月光》，输出锁定在 96 kHz，森海塞尔 HD 600 的 AutoEq 预设叠在实时频谱上">
+    </picture>
+    <figcaption>面板住在菜单栏里，均衡在它旁边展开。</figcaption>
+  </figure>
+
+  <section class="section" aria-labelledby="what">
+    <div class="wrap">
+      <h2 id="what">两件事，安静地做好。</h2>
+      <p class="intro">macOS 默认把输出设备固定在一个采样率，其余的曲目都会被悄悄重采样，不给任何提示。同频先解决这件事；只有你需要时，才去校正耳机。</p>
+      <div class="duo">
+        <div>
+          <h3>采样率自动切换</h3>
+          <p>同频读取 Apple Music 正在解码的格式，在换曲后一秒左右把输出设备切到同一采样率。改的只是你在「音频 MIDI 设置」里也能手动改的那一项。</p>
+          <ul class="facts">
+            <li><b>覆盖 Apple Music 全部采样率：</b>44.1、48、88.2、96、176.4、192 kHz</li>
+            <li><b>音源与输出并排显示，</b>附带编码、位深与音质等级</li>
+            <li><b>防抖处理，</b>不会在一首歌中途来回切换</li>
+            <li><b>可手动指定</b>设备支持的任意采样率</li>
+          </ul>
+        </div>
+        <div>
+          <h3>耳机均衡</h3>
+          <p>给 Apple Music 用的参数均衡，不需要虚拟声卡。导入预设，拖动曲线，滚轮调 Q，每副耳机各存一份配置。</p>
+          <ul class="facts">
+            <li><b>AutoEq、PEQdB、Equalizer APO</b>预设原样导入</li>
+            <li><b>最多 32 段：</b>峰值、低架与高架滤波</li>
+            <li><b>任何采样率下都准确，</b>按当前曲目重新拟合</li>
+            <li><b>跟随曲目，</b>或固定在 48 kHz，由你选择</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="workbench" aria-labelledby="workbench-title">
+    <div class="wrap">
+      <h2 id="workbench-title">工作台笔记。</h2>
+      <p class="intro">同频是我给自己做的：桌上是 HiFiMAN Susvara、森海塞尔 HD 800 S 和 HD 600，出门带 JVC HA-FW10000，听的都是 Apple Music。下面是我最满意的几处细节。</p>
+
+      <article class="note">
+        <h3>用苹果 Accelerate 跑双精度 PEQ</h3>
+        <div class="body">
+          <p>最早的均衡引擎是用 Swift 手写的逐样本双二阶滤波级联。精度没问题，但 192 kHz 立体声、16 段滤波要吃掉一个 CPU 核心的 10%。现在整条级联交给 Accelerate 的 <b><code>vDSP_biquadD</code></b>，每次调用处理最多 1,024 帧。</p>
+          <div class="bars" role="group" aria-label="CPU 占用：192 kHz 立体声、16 段，单个 Apple 芯片核心">
+            <div class="bar"><span class="name">Swift 逐样本实现</span><span class="value">10.1%</span><span class="meter"><i style="width:100%"></i></span></div>
+            <div class="bar ours"><span class="name"><code>vDSP_biquadD</code>，同频现在的引擎</span><span class="value">0.55%</span><span class="meter"><i style="width:5.4%"></i></span></div>
+            <div class="bar bad"><span class="name"><code>vDSP.Biquad&lt;Float&gt;</code>，快但误差 −11 dB</span><span class="value">0.61%</span><span class="meter"><i style="width:6%"></i></span></div>
+          </div>
+          <p>单精度版本一样快，却不能用：高 Q 的低频滤波器极点离单位圆太近，<code>Float</code> 系数放不准，而耳机预设里恰恰全是这种滤波器。所以运算坚持用 <code>Double</code>。音频线程上没有锁、没有内存分配；新预设通过一次原子交换送达，两组滤波器 20 ms 交叉淡化，改参数不会爆音。</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <h3>读懂 AutoEq 与 PEQdB</h3>
+        <div class="body">
+          <p>同频使用与两者相同的 RBJ 滤波器和搁架定义，预设在它们那边是什么意思，在这里就是什么意思。微妙之处在采样率：生成器只在一个采样率下拟合参数，<b>AutoEq 是 44.1 kHz，PEQdB 是 48 kHz</b>，同一组参数放到 96 或 192 kHz 播放，最高的一个八度就会偏移。</p>
+          <div class="bars" role="group" aria-label="真实预设在 96 与 192 kHz 下的最大频响误差">
+            <div class="bar"><span class="name">PEQdB 真实预设，直接播放</span><span class="value">最高 4.3 dB</span><span class="meter"><i style="width:100%"></i></span></div>
+            <div class="bar"><span class="name">典型 AutoEq 预设，直接播放</span><span class="value">1.9 dB</span><span class="meter"><i style="width:44%"></i></span></div>
+            <div class="bar ours"><span class="name">同频按播放采样率重新拟合</span><span class="value">约 0.04 dB</span><span class="meter"><i style="width:1%"></i></span></div>
+          </div>
+          <p>每一段都会在当前采样率下，重新拟合出它在设计采样率下的频响；一段跟不上时拆成两段。拟合结果会缓存，切换采样率不会带来可闻的代价。</p>
+        </div>
+      </article>
+
+      <article class="note">
+        <h3>不装驱动也能接管 Apple Music</h3>
+        <div class="body">
+          <p>均衡使用 macOS 14.4 起提供的 Core Audio process tap：对 Apple Music 建立一个静音的 tap，送进私有的聚合设备，在那里完成滤波，再输出到你的真实设备。踩过的几个坑：</p>
+          <ul class="ticks">
+            <li><b>tap 设备自己的音频流，</b>不要用立体声混音。混音固定在 48 kHz，96 kHz 的曲目在你拿到之前就被重采样了。</li>
+            <li><b>注意聚合设备的输入顺序：</b>tap 要排在设备自带输入之后，否则带麦克风输入的解码器只会给你静音。</li>
+            <li><b>声明音频输入权限，</b>即使什么都不录。没有它，macOS 会不声不响地拒绝 tap。</li>
+          </ul>
+          <p>关闭均衡时，同频完全不在信号路径上。</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="languages">
+    <div class="wrap">
+      <h2 id="languages">说你的语言。</h2>
+      <div class="langs">
+        <figure><img src="../screenshots/panel-zh-Hans.png" width="680" height="896" loading="lazy" alt="同频面板，简体中文"><figcaption>简体中文</figcaption></figure>
+        <figure><img src="../screenshots/panel-ja.png" width="680" height="896" loading="lazy" alt="同频面板，日语"><figcaption lang="ja">日本語</figcaption></figure>
+        <figure><img src="../screenshots/panel-light.png" width="680" height="896" loading="lazy" alt="同频面板，英语"><figcaption lang="en">English</figcaption></figure>
+      </div>
+      <p class="langlist">简体中文、繁體中文、English、日本語、한국어、Deutsch、Español、Français、Italiano、Nederlands、Português (Brasil)、Русский。随时在 ⋯ 菜单里切换，不受系统语言限制。在 Finder 和启动台里，它的名字显示为 SyncHz。</p>
+    </div>
+  </section>
+
+  <section class="section" id="install" aria-labelledby="install-title">
+    <div class="wrap">
+      <h2 id="install-title">一分钟装好。</h2>
+      <ol class="steps">
+        <li><div><h3>下载应用</h3><p>从 <a href="https://github.com/jcongaku/apple-music-lossless-eq/releases/latest">GitHub Releases</a> 下载最新的 <code>.dmg</code>，把 SyncHz 拖进「应用程序」。</p></div></li>
+        <li><div><h3>允许首次打开</h3><p>同频暂未经过苹果公证，macOS 会拦下第一次打开。在「终端」里运行一次：</p>
+          <div class="code"><code>xattr -dr com.apple.quarantine /Applications/SyncHz.app</code><button class="copy" type="button" data-label="复制" data-copied="已复制">复制</button></div></div></li>
+        <li><div><h3>在 Apple Music 里放一首歌</h3><p>按提示允许同频控制「音乐」。第一次打开均衡时会请求音频权限，用来让 tap 接收 Apple Music 的声音；你的麦克风永远不会被录制。</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="faq-title">
+    <div class="wrap">
+      <h2 id="faq-title">常见问题。</h2>
+      <div class="faq">
+        <details><summary>同频能让 Apple Music 做到 bit-perfect 吗？</summary><p>关闭均衡时可以。输出设备运行在 Apple Music 正在解码的曲目采样率上，不经过重采样，同频也不经手音频。开启均衡后音频会被处理，面板会明确标注。</p></details>
+        <details><summary>和 LosslessSwitcher 有什么区别？</summary><p>核心思路相同，实现不同。同频额外提供耳机均衡、正在播放面板、输出设备与音量控制和 12 种界面语言，面向 macOS 15 与 26。<a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a> 是这个思路的开创者，至今依然优秀，旧版 macOS 用户推荐使用。</p></details>
+        <details><summary>支持 Spotify、Tidal 或 Qobuz 吗？</summary><p>不支持。同频读取的是 Apple Music 自己的播放信息，只适用于 Apple Music。</p></details>
+        <details><summary>需要安装 BlackHole 这类虚拟声卡吗？</summary><p>不需要。切换采样率只是一个普通的 Core Audio 设置，均衡使用苹果的 process tap 接口。无需驱动，无需管理员权限。</p></details>
+        <details><summary>哪些解码器可以用？</summary><p>任何能在「音频 MIDI 设置」里切换多种采样率的输出设备：USB 解码器、耳放和声卡都可以。</p></details>
+        <details><summary>会收集数据吗？</summary><p>不会。它唯一的网络请求，是每次启动时去 GitHub 查一下有没有新版本。没有账号，没有标识符，没有统计。</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>同频 SyncHz 以 MIT 协议开源，由一位乐迷独立制作，站在 <a href="https://github.com/vincentneo/LosslessSwitcher">LosslessSwitcher</a>、<a href="https://github.com/jaakkopasanen/AutoEq">AutoEq</a> 与 <a href="https://peqdb.com/">PEQdB</a> 的肩膀上。Apple Music 是 Apple Inc. 的商标，同频与 Apple 无关联。</p>
+    <nav aria-label="页脚"><a href="https://github.com/jcongaku/apple-music-lossless-eq">GitHub</a><a href="https://github.com/jcongaku/apple-music-lossless-eq/releases">版本发布</a><a href="../" hreflang="en" lang="en">English</a></nav>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>
